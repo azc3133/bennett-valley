@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Bennett Valley</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="glcanvas" tabindex="1"></canvas>
+    <script src="mq_js_bundle.js"></script>
+    <script>
+      // ── Background Music (procedural) ─────────────────────────────
+      var bvMusicState = 0; // 0=off, 1=guqin, 2=pop
+      var bvMusicInterval = null;
+      var bvMusicGain = null;
+
+      function bvStopMusic() {
+        if (bvMusicInterval) { clearInterval(bvMusicInterval); bvMusicInterval = null; }
+        if (bvMusicGain) { try { bvMusicGain.gain.exponentialRampToValueAtTime(0.001, bvGetCtx().currentTime + 0.3); } catch(e) {} }
+      }
+
+      function bvPlayGuqin() {
+        var ctx = bvGetCtx();
+        bvMusicGain = ctx.createGain();
+        bvMusicGain.gain.value = 0.06;
+        bvMusicGain.connect(ctx.destination);
+        // Pentatonic scale: C4,D4,E4,G4,A4,C5,D5,E5
+        var notes = [262,294,330,392,440,523,587,659];
+        var noteIdx = 0;
+        var pattern = [0,2,4,5,4,2,3,1, 5,4,3,2,4,3,1,0, 2,4,5,7,5,4,3,2];
+        bvMusicInterval = setInterval(function() {
+          try {
+            var freq = notes[pattern[noteIdx % pattern.length]];
+            var osc = ctx.createOscillator();
+            osc.type = "sine";
+            osc.frequency.value = freq;
+            // Vibrato
+            var vib = ctx.createOscillator();
+            vib.frequency.value = 5;
+            var vibGain = ctx.createGain();
+            vibGain.gain.value = 3;
+            vib.connect(vibGain);
+            vibGain.connect(osc.frequency);
+            vib.start(ctx.currentTime);
+            // Envelope — plucked string decay
+            var env = ctx.createGain();
+            env.gain.value = 0.12;
+            env.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.8);
+            osc.connect(env);
+            env.connect(bvMusicGain);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 2.0);
+            vib.stop(ctx.currentTime + 2.0);
+            noteIdx++;
+          } catch(e) {}
+        }, 600);
+      }
+
+      function bvPlayPop() {
+        var ctx = bvGetCtx();
+        bvMusicGain = ctx.createGain();
+        bvMusicGain.gain.value = 0.05;
+        bvMusicGain.connect(ctx.destination);
+        // Chords: C-Am-F-G progression
+        var chords = [[262,330,392],[220,262,330],[175,220,262],[196,247,294]];
+        // Melody over chords
+        var melody = [523,494,440,392,440,494,523,587, 523,494,440,392,330,392,440,494];
+        var beat = 0;
+        bvMusicInterval = setInterval(function() {
+          try {
+            var chordIdx = Math.floor(beat / 4) % chords.length;
+            // Bass note
+            var bass = ctx.createOscillator();
+            bass.type = "triangle";
+            bass.frequency.value = chords[chordIdx][0] / 2;
+            var bEnv = ctx.createGain();
+            bEnv.gain.value = 0.08;
+            bEnv.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+            bass.connect(bEnv); bEnv.connect(bvMusicGain);
+            bass.start(ctx.currentTime); bass.stop(ctx.currentTime + 0.35);
+            // Chord stab on beat 0 of each chord
+            if (beat % 4 === 0) {
+              chords[chordIdx].forEach(function(f) {
+                var o = ctx.createOscillator();
+                o.type = "square";
+                o.frequency.value = f;
+                var g = ctx.createGain();
+                g.gain.value = 0.03;
+                g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+                o.connect(g); g.connect(bvMusicGain);
+                o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.9);
+              });
+            }
+            // Melody
+            var mNote = melody[beat % melody.length];
+            var mel = ctx.createOscillator();
+            mel.type = "sine";
+            mel.frequency.value = mNote;
+            var mEnv = ctx.createGain();
+            mEnv.gain.value = 0.06;
+            mEnv.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+            mel.connect(mEnv); mEnv.connect(bvMusicGain);
+            mel.start(ctx.currentTime); mel.stop(ctx.currentTime + 0.3);
+            beat++;
+          } catch(e) {}
+        }, 250);
+      }
+
+      function bvToggleMusic() {
+        bvStopMusic();
+        bvMusicState = (bvMusicState + 1) % 3;
+        if (bvMusicState === 1) bvPlayGuqin();
+        else if (bvMusicState === 2) bvPlayPop();
+        return bvMusicState;
+      }
+
+      // ── Sound effects via Web Audio API ────────────────────────────
+      var bvAudioCtx = null;
+      function bvGetCtx() {
+        if (!bvAudioCtx) bvAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        return bvAudioCtx;
+      }
+      function bvTone(freq, dur, type, vol) {
+        try {
+          var ctx = bvGetCtx();
+          var osc = ctx.createOscillator();
+          var gain = ctx.createGain();
+          osc.type = type || "square";
+          osc.frequency.value = freq;
+          gain.gain.value = vol || 0.08;
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + dur);
+        } catch(e) {}
+      }
+      function bvNoise(dur, vol) {
+        try {
+          var ctx = bvGetCtx();
+          var buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+          var data = buf.getChannelData(0);
+          for (var i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (vol || 0.05);
+          var src = ctx.createBufferSource();
+          src.buffer = buf;
+          var gain = ctx.createGain();
+          gain.gain.value = 1.0;
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+          src.connect(gain);
+          gain.connect(ctx.destination);
+          src.start();
+        } catch(e) {}
+      }
+      var bvSounds = {
+        step:     function() { bvNoise(0.05, 0.03); },
+        hoe:      function() { bvTone(120, 0.15, "triangle", 0.1); bvNoise(0.08, 0.06); },
+        water:    function() { bvNoise(0.2, 0.08); bvTone(800, 0.1, "sine", 0.03); },
+        plant:    function() { bvTone(400, 0.08, "sine", 0.06); bvTone(500, 0.06, "sine", 0.04); },
+        harvest:  function() { bvTone(600, 0.08, "sine", 0.07); setTimeout(function(){bvTone(800,0.08,"sine",0.07);},60); },
+        mine:     function() { bvTone(200, 0.1, "square", 0.06); bvNoise(0.05, 0.08); },
+        rockBreak:function() { bvNoise(0.15, 0.12); bvTone(150, 0.2, "triangle", 0.08); },
+        fishCast: function() { bvTone(300, 0.15, "sine", 0.05); bvTone(200, 0.2, "sine", 0.03); },
+        fishCatch:function() { bvTone(523, 0.1, "sine", 0.08); setTimeout(function(){bvTone(659,0.1,"sine",0.08);},100); setTimeout(function(){bvTone(784,0.15,"sine",0.08);},200); },
+        fishFail: function() { bvTone(300, 0.2, "sine", 0.06); setTimeout(function(){bvTone(200,0.3,"sine",0.05);},150); },
+        buy:      function() { bvTone(800, 0.06, "square", 0.05); setTimeout(function(){bvTone(1000,0.08,"square",0.05);},70); },
+        notify:   function() { bvTone(660, 0.08, "sine", 0.05); },
+        door:     function() { bvTone(180, 0.12, "triangle", 0.06); bvNoise(0.06, 0.04); },
+        horse:    function() { bvTone(200, 0.06, "sawtooth", 0.04); bvTone(250, 0.06, "sawtooth", 0.04); },
+        leap:     function() { bvTone(300, 0.1, "sine", 0.06); bvTone(500, 0.15, "sine", 0.05); },
+        egg:      function() { bvTone(700, 0.06, "sine", 0.06); setTimeout(function(){bvTone(900,0.08,"sine",0.06);},80); },
+      };
+
+      // ── Multiplayer HTTP polling ─────────────────────────────────
+      var bvMpRoom = null;
+      var bvMpRole = null; // "host" or "guest"
+      var bvMpLatestState = "";
+      var bvMpLatestInputs = "[]";
+      var bvMpPollTimer = null;
+
+      function bvMpStartPolling() {
+        if (bvMpPollTimer) clearInterval(bvMpPollTimer);
+        bvMpPollTimer = setInterval(function() {
+          if (!bvMpRoom) return;
+          if (bvMpRole === "guest") {
+            fetch("/api/mp/state?room=" + bvMpRoom)
+              .then(r => r.text())
+              .then(t => { bvMpLatestState = t; })
+              .catch(() => {});
+          } else if (bvMpRole === "host") {
+            fetch("/api/mp/inputs?room=" + bvMpRoom)
+              .then(r => r.text())
+              .then(t => { bvMpLatestInputs = t; })
+              .catch(() => {});
+          }
+        }, 100);
+      }
+
+      // ── Ride-to command (called from browser console) ─────────────
+      var bvRideCmd = "";
+      window.bvRideTo = function(dest) {
+        if (!dest) {
+          console.log("Usage: bvRideTo('Shop') — destinations: Farmhouse, Shop, Shipping Box, Inn, Market, Tavern, Clinic, Library, Furniture Shop, Town Hall, Animal Shop, Arcade, Restaurant, Pool, Playground, Mine, South Lake, East Meadow, East Pond, Horse Stable");
+          return;
+        }
+        bvRideCmd = dest;
+        console.log("Sending horse to: " + dest);
+      };
+
+      // Global join function (called from browser console or UI)
+      window.bvJoin = function(code) {
+        if (!code) { console.log("Usage: bvJoin('ABCD')"); return; }
+        fetch("/api/mp/join?room=" + code.toUpperCase(), {method:"POST"})
+          .then(r => r.json())
+          .then(data => {
+            if (data.ok) {
+              bvMpRoom = code.toUpperCase();
+              bvMpRole = "guest";
+              bvMpStartPolling();
+              console.log("Joined room " + bvMpRoom + "! Use arrow keys to move.");
+            } else {
+              console.log("Room not found: " + code);
+            }
+          });
+      };
+
+      // Register localStorage save/load/clear functions as WASM imports
+      // via Macroquad's miniquad plugin system.
+      miniquad_add_plugin({
+        name: "bv_storage",
+        version: "0.1.0",
+        register_plugin: function(importObject) {
+          // Multiplayer: create room (host)
+          importObject.env.bv_mp_create = function(buf_ptr, buf_max) {
+            try {
+              var result = "";
+              var xhr = new XMLHttpRequest();
+              xhr.open("POST", "/api/mp/create", false); // synchronous
+              xhr.send();
+              if (xhr.status === 200) {
+                var data = JSON.parse(xhr.responseText);
+                bvMpRoom = data.room;
+                bvMpRole = "host";
+                result = bvMpRoom;
+                bvMpStartPolling();
+              }
+              var bytes = new TextEncoder().encode(result);
+              var len = Math.min(bytes.length, buf_max);
+              new Uint8Array(wasm_memory.buffer, buf_ptr, len).set(bytes.subarray(0, len));
+              return len;
+            } catch(e) { return 0; }
+          };
+          // Multiplayer: join room (guest)
+          importObject.env.bv_mp_join = function(ptr, len, buf_ptr, buf_max) {
+            try {
+              var code = new TextDecoder().decode(new Uint8Array(wasm_memory.buffer, ptr, len));
+              var xhr = new XMLHttpRequest();
+              xhr.open("POST", "/api/mp/join?room=" + code, false);
+              xhr.send();
+              var data = JSON.parse(xhr.responseText);
+              var result = data.ok ? "ok" : "fail";
+              if (data.ok) {
+                bvMpRoom = code;
+                bvMpRole = "guest";
+                bvMpStartPolling();
+              }
+              var bytes = new TextEncoder().encode(result);
+              var wl = Math.min(bytes.length, buf_max);
+              new Uint8Array(wasm_memory.buffer, buf_ptr, wl).set(bytes.subarray(0, wl));
+              return wl;
+            } catch(e) { return 0; }
+          };
+          // Multiplayer: host sends state
+          importObject.env.bv_mp_sync = function(ptr, len) {
+            if (!bvMpRoom || bvMpRole !== "host") return;
+            try {
+              var str = new TextDecoder().decode(new Uint8Array(wasm_memory.buffer, ptr, len));
+              fetch("/api/mp/sync?room=" + bvMpRoom, {method:"POST", body:str}).catch(()=>{});
+            } catch(e) {}
+          };
+          // Multiplayer: guest sends input
+          importObject.env.bv_mp_send_input = function(ptr, len) {
+            if (!bvMpRoom || bvMpRole !== "guest") return;
+            try {
+              var str = new TextDecoder().decode(new Uint8Array(wasm_memory.buffer, ptr, len));
+              fetch("/api/mp/input?room=" + bvMpRoom, {method:"POST", body:str}).catch(()=>{});
+            } catch(e) {}
+          };
+          // Multiplayer: read latest state (guest) or inputs (host)
+          importObject.env.bv_mp_read = function(buf_ptr, buf_max) {
+            try {
+              var str = (bvMpRole === "guest") ? bvMpLatestState : bvMpLatestInputs;
+              if (bvMpRole === "host") bvMpLatestInputs = "[]"; // clear after read
+              var bytes = new TextEncoder().encode(str);
+              var len = Math.min(bytes.length, buf_max);
+              new Uint8Array(wasm_memory.buffer, buf_ptr, len).set(bytes.subarray(0, len));
+              return len;
+            } catch(e) { return 0; }
+          };
+          // Multiplayer: get role
+          importObject.env.bv_mp_role = function(buf_ptr, buf_max) {
+            try {
+              var str = bvMpRole || "none";
+              var bytes = new TextEncoder().encode(str);
+              var len = Math.min(bytes.length, buf_max);
+              new Uint8Array(wasm_memory.buffer, buf_ptr, len).set(bytes.subarray(0, len));
+              return len;
+            } catch(e) { return 0; }
+          };
+          importObject.env.bv_toggle_music = function() {
+            return bvToggleMusic();
+          };
+          importObject.env.bv_read_ride_cmd = function(buf_ptr, buf_max) {
+            if (!bvRideCmd) return 0;
+            try {
+              var bytes = new TextEncoder().encode(bvRideCmd);
+              var len = Math.min(bytes.length, buf_max);
+              new Uint8Array(wasm_memory.buffer, buf_ptr, len).set(bytes.subarray(0, len));
+              bvRideCmd = "";
+              return len;
+            } catch(e) { return 0; }
+          };
+          importObject.env.bv_play_sound = function(ptr, len) {
+            try {
+              var bytes = new Uint8Array(wasm_memory.buffer, ptr, len);
+              var name = new TextDecoder().decode(bytes);
+              if (bvSounds[name]) bvSounds[name]();
+            } catch(e) {}
+          };
+          importObject.env.bv_save_game = function(ptr, len) {
+            try {
+              const bytes = new Uint8Array(wasm_memory.buffer, ptr, len);
+              const str = new TextDecoder().decode(bytes);
+              localStorage.setItem("bv_save", str);
+            } catch(e) { console.warn("bv_save_game failed:", e); }
+          };
+          importObject.env.bv_load_game = function(ptr, max_len) {
+            try {
+              const str = localStorage.getItem("bv_save");
+              if (!str) return 0;
+              const bytes = new TextEncoder().encode(str);
+              const write_len = Math.min(bytes.length, max_len);
+              new Uint8Array(wasm_memory.buffer, ptr, write_len).set(bytes.subarray(0, write_len));
+              return write_len;
+            } catch(e) { console.warn("bv_load_game failed:", e); return 0; }
+          };
+          importObject.env.bv_clear_save = function() {
+            try { localStorage.removeItem("bv_save"); } catch(e) {}
+          };
+        }
+      });
+    </script>
+    <script>load("bennett_valley.wasm?v=" + Date.now());</script>
+</body>
+</html>

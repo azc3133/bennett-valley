@@ -1,0 +1,592 @@
+{
+  "crops": {
+    "parsnip": {
+      "grow_days": 4,
+      "seed_buy_price": 20,
+      "sell_price": 35,
+      "season": "spring"
+    },
+    "potato": {
+      "grow_days": 6,
+      "seed_buy_price": 50,
+      "sell_price": 80,
+      "season": "spring"
+    },
+    "cauliflower": {
+      "grow_days": 12,
+      "seed_buy_price": 80,
+      "sell_price": 175,
+      "season": "spring"
+    },
+    "melon": {
+      "grow_days": 12,
+      "seed_buy_price": 80,
+      "sell_price": 250,
+      "season": "summer"
+    },
+    "blueberry": {
+      "grow_days": 6,
+      "seed_buy_price": 80,
+      "sell_price": 50,
+      "season": "summer"
+    },
+    "tomato": {
+      "grow_days": 8,
+      "seed_buy_price": 50,
+      "sell_price": 60,
+      "season": "summer"
+    },
+    "pumpkin": {
+      "grow_days": 12,
+      "seed_buy_price": 100,
+      "sell_price": 320,
+      "season": "fall"
+    },
+    "yam": {
+      "grow_days": 6,
+      "seed_buy_price": 60,
+      "sell_price": 160,
+      "season": "fall"
+    },
+    "cranberry": {
+      "grow_days": 7,
+      "seed_buy_price": 240,
+      "sell_price": 75,
+      "season": "fall"
+    }
+  },
+  "energy": {
+    "start": 270,
+    "hoe_cost": 2,
+    "water_cost": 2,
+    "plant_cost": 1,
+    "harvest_cost": 1,
+    "forage_cost": 1,
+    "fish_cost": 2,
+    "mine_cost": 4
+  },
+  "ore": {
+    "rock_hp": 3,
+    "sell_prices": {
+      "copper": 25,
+      "iron": 50,
+      "gold": 100
+    }
+  },
+  "fish": {
+    "sell_prices": {
+      "bass": 50,
+      "catfish": 75,
+      "trout": 65,
+      "salmon": 80
+    }
+  },
+  "forage": {
+    "sell_prices": {
+      "mushroom": 40,
+      "berry": 20,
+      "herb": 30,
+      "flower": 25,
+      "fern": 15,
+      "acorn": 35
+    }
+  },
+  "shop": {
+    "buy_markup": 1.0,
+    "sell_markdown": 1.0
+  },
+  "npcs": [
+    {
+      "id": 0,
+      "name": "Elara",
+      "personality": "curious",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [15, 12] },
+        { "start_hour": 12, "end_hour": 19, "tile": [44, 13] },
+        { "start_hour": 19, "end_hour": 26, "tile": [62, 6] }
+      ],
+      "gift_preferences": { "cauliflower": 2, "potato": 1, "parsnip": -1, "salmon": 2 },
+      "marriageable": true
+    },
+    {
+      "id": 1,
+      "name": "Tom",
+      "personality": "gruff",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 10, "tile": [8, 16] },
+        { "start_hour": 10, "end_hour": 18, "tile": [15, 10] },
+        { "start_hour": 18, "end_hour": 26, "tile": [4, 20] }
+      ],
+      "gift_preferences": { "potato": 2, "parsnip": 1, "cauliflower": -1, "mushroom": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 2,
+      "name": "Maya",
+      "personality": "cheerful",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 13, "tile": [52, 11] },
+        { "start_hour": 13, "end_hour": 20, "tile": [85, 6] },
+        { "start_hour": 20, "end_hour": 26, "tile": [44, 1] }
+      ],
+      "gift_preferences": { "parsnip": 2, "cauliflower": 1, "potato": 0, "flower": 2 },
+      "marriageable": true
+    },
+    {
+      "id": 3,
+      "name": "Rex",
+      "personality": "boisterous",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [20, 15] },
+        { "start_hour": 12, "end_hour": 20, "tile": [30, 18] },
+        { "start_hour": 20, "end_hour": 26, "tile": [15, 25] }
+      ],
+      "gift_preferences": { "potato": 1, "parsnip": 1, "cauliflower": 2, "copper": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 4,
+      "name": "Suki",
+      "personality": "gentle",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 11, "tile": [56, 13] },
+        { "start_hour": 11, "end_hour": 18, "tile": [16, 32] },
+        { "start_hour": 18, "end_hour": 26, "tile": [45, 36] }
+      ],
+      "gift_preferences": { "cauliflower": 1, "parsnip": 2, "potato": -1, "trout": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 5,
+      "name": "Finn",
+      "personality": "weathered",
+      "schedule": [
+        { "start_hour": 5, "end_hour": 11, "tile": [75, 5] },
+        { "start_hour": 11, "end_hour": 18, "tile": [75, 19] },
+        { "start_hour": 18, "end_hour": 26, "tile": [75, 12] }
+      ],
+      "gift_preferences": { "potato": 1, "parsnip": 0, "cauliflower": 1, "bass": 2 },
+      "marriageable": true
+    },
+    {
+      "id": 6,
+      "name": "Petra",
+      "personality": "stoic",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [48, 21] },
+        { "start_hour": 12, "end_hour": 19, "tile": [55, 22] },
+        { "start_hour": 19, "end_hour": 26, "tile": [48, 20] }
+      ],
+      "gift_preferences": { "cauliflower": -1, "potato": 2, "parsnip": 0, "fern": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 7,
+      "name": "Lily",
+      "personality": "dreamy",
+      "schedule": [
+        { "start_hour": 7, "end_hour": 12, "tile": [6, 21] },
+        { "start_hour": 12, "end_hour": 19, "tile": [9, 21] },
+        { "start_hour": 19, "end_hour": 26, "tile": [3, 16] }
+      ],
+      "gift_preferences": { "parsnip": 1, "cauliflower": 2, "potato": -1, "berry": 2 },
+      "marriageable": true
+    },
+    {
+      "id": 8,
+      "name": "Otto",
+      "personality": "earnest",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [12, 8] },
+        { "start_hour": 12, "end_hour": 18, "tile": [48, 22] },
+        { "start_hour": 18, "end_hour": 26, "tile": [40, 20] }
+      ],
+      "gift_preferences": { "potato": 2, "cauliflower": 1, "parsnip": 1, "iron": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 9,
+      "name": "Bea",
+      "personality": "brisk",
+      "schedule": [
+        { "start_hour": 8, "end_hour": 13, "tile": [53, 1] },
+        { "start_hour": 13, "end_hour": 19, "tile": [93, 6] },
+        { "start_hour": 19, "end_hour": 26, "tile": [48, 19] }
+      ],
+      "gift_preferences": { "cauliflower": 2, "parsnip": -1, "potato": 1, "melon": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 10,
+      "name": "Cal",
+      "personality": "wandering",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 11, "tile": [5, 20] },
+        { "start_hour": 11, "end_hour": 17, "tile": [62, 11] },
+        { "start_hour": 17, "end_hour": 26, "tile": [30, 20] }
+      ],
+      "gift_preferences": { "parsnip": 1, "potato": 1, "cauliflower": 0, "mushroom": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 11,
+      "name": "Rue",
+      "personality": "reclusive",
+      "schedule": [
+        { "start_hour": 9, "end_hour": 14, "tile": [74, 8] },
+        { "start_hour": 14, "end_hour": 20, "tile": [74, 15] },
+        { "start_hour": 20, "end_hour": 26, "tile": [74, 22] }
+      ],
+      "gift_preferences": { "cauliflower": -1, "parsnip": 2, "potato": 0, "catfish": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 12,
+      "name": "Nora",
+      "personality": "nurturing",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [68, 1] },
+        { "start_hour": 12, "end_hour": 18, "tile": [68, 11] },
+        { "start_hour": 18, "end_hour": 26, "tile": [101, 6] }
+      ],
+      "gift_preferences": { "parsnip": 2, "potato": 1, "cauliflower": 1, "flower": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 13,
+      "name": "Dash",
+      "personality": "reckless",
+      "schedule": [
+        { "start_hour": 7, "end_hour": 12, "tile": [50, 23] },
+        { "start_hour": 12, "end_hour": 18, "tile": [62, 23] },
+        { "start_hour": 18, "end_hour": 26, "tile": [48, 22] }
+      ],
+      "gift_preferences": { "potato": 2, "cauliflower": -1, "parsnip": 1, "gold": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 14,
+      "name": "Ivy",
+      "personality": "methodical",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [72, 6] },
+        { "start_hour": 12, "end_hour": 18, "tile": [72, 13] },
+        { "start_hour": 18, "end_hour": 26, "tile": [64, 6] }
+      ],
+      "gift_preferences": { "cauliflower": 1, "parsnip": 1, "potato": 2, "herb": 2 },
+      "marriageable": true
+    },
+    {
+      "id": 15,
+      "name": "Victor",
+      "personality": "resentful",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [30, 20] },
+        { "start_hour": 12, "end_hour": 20, "tile": [3, 24] },
+        { "start_hour": 20, "end_hour": 26, "tile": [35, 20] }
+      ],
+      "gift_preferences": { "parsnip": -1, "potato": -1, "cauliflower": -1, "salmon": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 16,
+      "name": "Hank",
+      "personality": "taciturn",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [52, 23] },
+        { "start_hour": 12, "end_hour": 18, "tile": [63, 25] },
+        { "start_hour": 18, "end_hour": 26, "tile": [48, 25] }
+      ],
+      "gift_preferences": { "parsnip": 1, "potato": 0, "cauliflower": 0, "iron": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 17,
+      "name": "Cleo",
+      "personality": "calculating",
+      "schedule": [
+        { "start_hour": 8, "end_hour": 13, "tile": [64, 1] },
+        { "start_hour": 13, "end_hour": 19, "tile": [70, 13] },
+        { "start_hour": 19, "end_hour": 26, "tile": [109, 13] }
+      ],
+      "gift_preferences": { "cauliflower": 2, "potato": 1, "parsnip": 0, "berry": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 18,
+      "name": "Ward",
+      "personality": "patient",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [14, 20] },
+        { "start_hour": 12, "end_hour": 19, "tile": [6, 24] },
+        { "start_hour": 19, "end_hour": 26, "tile": [5, 27] }
+      ],
+      "gift_preferences": { "potato": 1, "parsnip": 2, "cauliflower": -1, "mushroom": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 19,
+      "name": "Faye",
+      "personality": "whimsical",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [58, 7] },
+        { "start_hour": 12, "end_hour": 19, "tile": [62, 12] },
+        { "start_hour": 19, "end_hour": 26, "tile": [58, 19] }
+      ],
+      "gift_preferences": { "cauliflower": 1, "parsnip": 1, "potato": 0, "flower": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 20,
+      "name": "Gus",
+      "personality": "jovial",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [60, 1] },
+        { "start_hour": 12, "end_hour": 18, "tile": [60, 19] },
+        { "start_hour": 18, "end_hour": 26, "tile": [97, 13] }
+      ],
+      "gift_preferences": { "potato": 2, "cauliflower": 1, "parsnip": 1, "bass": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 21,
+      "name": "Mira",
+      "personality": "restless",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [18, 7] },
+        { "start_hour": 12, "end_hour": 18, "tile": [90, 10] },
+        { "start_hour": 18, "end_hour": 26, "tile": [11, 36] }
+      ],
+      "gift_preferences": { "parsnip": 2, "potato": 0, "cauliflower": 1, "herb": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 22,
+      "name": "Sol",
+      "personality": "industrious",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [19, 5] },
+        { "start_hour": 12, "end_hour": 18, "tile": [48, 22] },
+        { "start_hour": 18, "end_hour": 26, "tile": [85, 13] }
+      ],
+      "gift_preferences": { "potato": 1, "parsnip": 1, "cauliflower": 2, "trout": 2 },
+      "marriageable": true
+    },
+    {
+      "id": 23,
+      "name": "Pip",
+      "personality": "excitable",
+      "schedule": [
+        { "start_hour": 8, "end_hour": 13, "tile": [46, 1] },
+        { "start_hour": 13, "end_hour": 19, "tile": [68, 11] },
+        { "start_hour": 19, "end_hour": 26, "tile": [105, 6] }
+      ],
+      "gift_preferences": { "cauliflower": -1, "parsnip": 2, "potato": 1, "catfish": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 24,
+      "name": "Doc",
+      "personality": "deliberate",
+      "schedule": [
+        { "start_hour": 7, "end_hour": 13, "tile": [68, 6] },
+        { "start_hour": 13, "end_hour": 20, "tile": [64, 13] },
+        { "start_hour": 20, "end_hour": 26, "tile": [72, 1] }
+      ],
+      "gift_preferences": { "cauliflower": 2, "potato": -1, "parsnip": 1, "fern": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 25,
+      "name": "Vera",
+      "personality": "salty",
+      "schedule": [
+        { "start_hour": 5, "end_hour": 11, "tile": [11, 33] },
+        { "start_hour": 11, "end_hour": 18, "tile": [22, 32] },
+        { "start_hour": 18, "end_hour": 26, "tile": [45, 36] }
+      ],
+      "gift_preferences": { "potato": 2, "parsnip": 1, "cauliflower": 0, "berry": 2 },
+      "marriageable": true
+    },
+    {
+      "id": 26,
+      "name": "Zed",
+      "personality": "nostalgic",
+      "schedule": [
+        { "start_hour": 7, "end_hour": 12, "tile": [51, 24] },
+        { "start_hour": 12, "end_hour": 19, "tile": [48, 25] },
+        { "start_hour": 19, "end_hour": 26, "tile": [48, 20] }
+      ],
+      "gift_preferences": { "potato": 0, "parsnip": 1, "cauliflower": 2, "copper": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 27,
+      "name": "Ada",
+      "personality": "scholarly",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 13, "tile": [44, 13] },
+        { "start_hour": 13, "end_hour": 19, "tile": [50, 1] },
+        { "start_hour": 19, "end_hour": 26, "tile": [88, 6] }
+      ],
+      "gift_preferences": { "cauliflower": 2, "parsnip": 1, "potato": -1, "fern": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 28,
+      "name": "Cass",
+      "personality": "reserved",
+      "schedule": [
+        { "start_hour": 8, "end_hour": 14, "tile": [8, 30] },
+        { "start_hour": 14, "end_hour": 20, "tile": [20, 32] },
+        { "start_hour": 20, "end_hour": 26, "tile": [5, 38] }
+      ],
+      "gift_preferences": { "parsnip": 1, "potato": 1, "cauliflower": 0, "mushroom": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 29,
+      "name": "Holt",
+      "personality": "blunt",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [6, 7] },
+        { "start_hour": 12, "end_hour": 18, "tile": [2, 12] },
+        { "start_hour": 18, "end_hour": 26, "tile": [1, 18] }
+      ],
+      "gift_preferences": { "potato": 2, "cauliflower": -1, "parsnip": 1, "iron": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 30,
+      "name": "Moe",
+      "personality": "grizzled",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [66, 1] },
+        { "start_hour": 12, "end_hour": 18, "tile": [95, 20] },
+        { "start_hour": 18, "end_hour": 26, "tile": [60, 1] }
+      ],
+      "gift_preferences": { "potato": 2, "parsnip": 2, "cauliflower": 1, "bass": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 31,
+      "name": "Rin",
+      "personality": "melancholy",
+      "schedule": [
+        { "start_hour": 9, "end_hour": 14, "tile": [22, 32] },
+        { "start_hour": 14, "end_hour": 21, "tile": [28, 44] },
+        { "start_hour": 21, "end_hour": 26, "tile": [11, 39] }
+      ],
+      "gift_preferences": { "cauliflower": 1, "parsnip": 2, "potato": 0, "flower": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 32,
+      "name": "Tess",
+      "personality": "warm",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [44, 1] },
+        { "start_hour": 12, "end_hour": 18, "tile": [72, 6] },
+        { "start_hour": 18, "end_hour": 26, "tile": [96, 6] }
+      ],
+      "gift_preferences": { "potato": 1, "cauliflower": 2, "parsnip": 1, "herb": 2 },
+      "marriageable": true
+    },
+    {
+      "id": 33,
+      "name": "Val",
+      "personality": "eager",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [48, 22] },
+        { "start_hour": 12, "end_hour": 18, "tile": [53, 24] },
+        { "start_hour": 18, "end_hour": 26, "tile": [55, 22] }
+      ],
+      "gift_preferences": { "cauliflower": 0, "potato": 2, "parsnip": 1, "salmon": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 34,
+      "name": "Bram",
+      "personality": "eccentric",
+      "schedule": [
+        { "start_hour": 7, "end_hour": 13, "tile": [1, 7] },
+        { "start_hour": 13, "end_hour": 20, "tile": [3, 14] },
+        { "start_hour": 20, "end_hour": 26, "tile": [2, 19] }
+      ],
+      "gift_preferences": { "parsnip": 2, "cauliflower": 1, "potato": -1, "berry": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 35,
+      "name": "Dex",
+      "personality": "watchful",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [75, 12] },
+        { "start_hour": 12, "end_hour": 19, "tile": [75, 26] },
+        { "start_hour": 19, "end_hour": 26, "tile": [75, 34] }
+      ],
+      "gift_preferences": { "potato": 1, "parsnip": 1, "cauliflower": 2, "copper": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 36,
+      "name": "Wyn",
+      "personality": "hopeful",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [48, 1] },
+        { "start_hour": 12, "end_hour": 18, "tile": [104, 13] },
+        { "start_hour": 18, "end_hour": 26, "tile": [64, 19] }
+      ],
+      "gift_preferences": { "cauliflower": 2, "parsnip": 1, "potato": 0, "fern": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 37,
+      "name": "Sage",
+      "personality": "contemplative",
+      "schedule": [
+        { "start_hour": 7, "end_hour": 13, "tile": [58, 11] },
+        { "start_hour": 13, "end_hour": 20, "tile": [44, 13] },
+        { "start_hour": 20, "end_hour": 26, "tile": [56, 1] }
+      ],
+      "gift_preferences": { "parsnip": 2, "potato": 0, "cauliflower": 1, "trout": 2 },
+      "marriageable": true
+    },
+    {
+      "id": 38,
+      "name": "Kit",
+      "personality": "mischievous",
+      "schedule": [
+        { "start_hour": 8, "end_hour": 13, "tile": [34, 32] },
+        { "start_hour": 13, "end_hour": 19, "tile": [40, 32] },
+        { "start_hour": 19, "end_hour": 26, "tile": [45, 42] }
+      ],
+      "gift_preferences": { "potato": 1, "parsnip": 2, "cauliflower": -1, "catfish": 2 },
+      "marriageable": false
+    },
+    {
+      "id": 39,
+      "name": "Arlo",
+      "personality": "steady",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [13, 5] },
+        { "start_hour": 12, "end_hour": 18, "tile": [112, 6] },
+        { "start_hour": 18, "end_hour": 26, "tile": [52, 19] }
+      ],
+      "gift_preferences": { "potato": 2, "parsnip": 1, "cauliflower": 2, "iron": 2 },
+      "marriageable": true
+    },
+    {
+      "id": 40,
+      "name": "Morgan",
+      "personality": "journalist",
+      "schedule": [
+        { "start_hour": 6, "end_hour": 12, "tile": [100, 20] },
+        { "start_hour": 12, "end_hour": 18, "tile": [15, 12] },
+        { "start_hour": 18, "end_hour": 26, "tile": [70, 20] }
+      ],
+      "gift_preferences": { "potato": 0, "parsnip": 0, "cauliflower": 0, "salmon": 2 },
+      "marriageable": false
+    }
+  ]
+}

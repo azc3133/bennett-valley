@@ -1,0 +1,5 @@
+/target
+/dist
+/memory
+/static/bennett_valley.wasm
+.DS_Store

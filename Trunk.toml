@@ -1,0 +1,24 @@
+[build]
+target = "index.html"
+dist = "dist"
+
+[serve]
+port = 8080
+open = false
+
+[watch]
+watch = ["src", "static"]
+ignore = ["dist", "target"]
+
+[[hooks]]
+stage = "pre_build"
+command = "cargo"
+command_arguments = ["build", "--target", "wasm32-unknown-unknown", "--release"]
+
+[[hooks]]
+stage = "pre_build"
+command = "cp"
+command_arguments = [
+    "target/wasm32-unknown-unknown/release/bennett_valley.wasm",
+    "static/bennett_valley.wasm"
+]

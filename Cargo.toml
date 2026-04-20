@@ -1,0 +1,16 @@
+[package]
+name = "bennett_valley"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "bennett_valley"
+path = "src/main.rs"
+
+[dependencies]
+macroquad = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
