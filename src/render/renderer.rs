@@ -137,6 +137,12 @@ fn draw_with_coop(state: &GameState, camera: &Camera, _camera2: Option<&Camera>)
         GamePhase::IceCreamShopOpen => {
             draw_icecream_menu(state);
         }
+        GamePhase::TeaMenu => {
+            draw_tea_menu(state);
+        }
+        GamePhase::WizardShop => {
+            draw_wizard_menu(state);
+        }
         GamePhase::HorseDestination => {
             draw_horse_destinations(state);
         }
@@ -260,6 +266,127 @@ fn draw_icecream_menu(state: &GameState) {
     draw_text(hint, bx + bw / 2.0 - hw / 2.0, by + bh - 8.0, 12.0, Color::from_hex(0x993355));
 }
 
+fn draw_wizard_menu(state: &GameState) {
+    let sw = screen_width();
+    let sh = screen_height();
+    let spells = GameState::WIZARD_SPELLS;
+    let row_h = 50.0;
+    let pad = 14.0;
+    let bw = 380.0;
+    let bh = pad * 2.0 + 40.0 + spells.len() as f32 * row_h + 24.0;
+    let bx = sw / 2.0 - bw / 2.0;
+    let by = sh / 2.0 - bh / 2.0;
+
+    draw_rectangle(0.0, 0.0, sw, sh, Color { r: 0.0, g: 0.0, b: 0.0, a: 0.6 });
+    // Mystical purple background
+    draw_rectangle(bx, by, bw, bh, Color::from_hex(0x1a0a2e));
+    draw_rectangle_lines(bx, by, bw, bh, 3.0, Color::from_hex(0xaa66ff));
+
+    let title = "~ Wizard's Enchantments ~";
+    let tw = measure_text(title, None, 20, 1.0).width;
+    draw_text(title, bx + bw / 2.0 - tw / 2.0, by + pad + 20.0, 20.0, Color::from_hex(0xcc99ff));
+
+    // Active buffs summary
+    let mut active: Vec<&str> = Vec::new();
+    if state.buff_growth > 0 { active.push("Growth"); }
+    if state.buff_charm > 0 { active.push("Charm"); }
+    if state.buff_lucky > 0 { active.push("Lucky"); }
+    if state.buff_endurance > 0 { active.push("Endure"); }
+    if !active.is_empty() {
+        let buf_text = format!("Active: {}", active.join(", "));
+        draw_text(&buf_text, bx + pad, by + pad + 36.0, 11.0, Color::from_hex(0x88ff88));
+    }
+
+    for (i, &(name, desc, item, qty, buff_type)) in spells.iter().enumerate() {
+        let ry = by + pad + 48.0 + i as f32 * row_h;
+        let selected = i == state.wizard_cursor;
+        if selected {
+            draw_rectangle(bx + 4.0, ry - 6.0, bw - 8.0, row_h - 4.0, Color::from_hex(0x2a1a4e));
+        }
+
+        let active_days = match buff_type {
+            0 => state.buff_growth,
+            1 => state.buff_charm,
+            2 => state.buff_lucky,
+            3 => state.buff_endurance,
+            _ => 0,
+        };
+
+        let name_color = if selected { Color::from_hex(0xcc99ff) } else { Color::from_hex(0x9977cc) };
+        let desc_color = if selected { Color::from_hex(0xcccccc) } else { Color::from_hex(0x888888) };
+
+        // Spell name
+        draw_text(&format!("{}{}", if selected { "> " } else { "  " }, name), bx + pad, ry + 10.0, 17.0, name_color);
+        // Description
+        draw_text(desc, bx + pad + 20.0, ry + 26.0, 12.0, desc_color);
+        // Cost
+        let have = match item {
+            "wood" => state.player.inventory.count(&crate::game::inventory::ItemKind::Wood),
+            "fiber" => state.player.inventory.count(&crate::game::inventory::ItemKind::Fiber),
+            _ => 0,
+        };
+        let cost_text = format!("{} {} ({}/{})", qty, item, have, qty);
+        let affordable = have >= qty;
+        let cost_color = if active_days > 0 {
+            Color::from_hex(0x88ff88)
+        } else if affordable {
+            Color::from_hex(0xf4d03f)
+        } else {
+            Color::from_hex(0xe74c3c)
+        };
+        let status = if active_days > 0 { format!("ACTIVE ({} days)", active_days) } else { cost_text };
+        let stw = measure_text(&status, None, 13, 1.0).width;
+        draw_text(&status, bx + bw - stw - pad, ry + 10.0, 13.0, cost_color);
+    }
+
+    let hint = "W/S: Select   E: Cast   Esc: Leave";
+    let hw = measure_text(hint, None, 12, 1.0).width;
+    draw_text(hint, bx + bw / 2.0 - hw / 2.0, by + bh - 8.0, 12.0, Color::from_hex(0x6644aa));
+}
+
+fn draw_tea_menu(state: &GameState) {
+    let sw = screen_width();
+    let sh = screen_height();
+    let menu = GameState::TEA_MENU;
+    let row_h = 26.0;
+    let pad = 14.0;
+    let bw = 300.0;
+    let bh = pad * 2.0 + 32.0 + menu.len() as f32 * row_h + 24.0;
+    let bx = sw / 2.0 - bw / 2.0;
+    let by = sh / 2.0 - bh / 2.0;
+
+    draw_rectangle(0.0, 0.0, sw, sh, Color { r: 0.0, g: 0.0, b: 0.0, a: 0.5 });
+    // Warm tea-colored background
+    draw_rectangle(bx, by, bw, bh, Color::from_hex(0x2d1a0e));
+    draw_rectangle_lines(bx, by, bw, bh, 3.0, Color::from_hex(0xc8a060));
+
+    let title = "Pavilion Tea Room";
+    let tw = measure_text(title, None, 20, 1.0).width;
+    draw_text(title, bx + bw / 2.0 - tw / 2.0, by + pad + 18.0, 20.0, Color::from_hex(0xc8a060));
+
+    // Tea cup icon
+    draw_text("~", bx + bw / 2.0 - tw / 2.0 - 16.0, by + pad + 16.0, 18.0, Color::from_hex(0xeecc88));
+
+    for (i, &(name, price, energy)) in menu.iter().enumerate() {
+        let ry = by + pad + 38.0 + i as f32 * row_h;
+        let selected = i == state.tea_cursor;
+        if selected {
+            draw_rectangle(bx + 4.0, ry - 14.0, bw - 8.0, row_h - 2.0, Color::from_hex(0x4a2a14));
+        }
+        let color = if selected { Color::from_hex(0xf4d03f) } else { Color::from_hex(0xddc090) };
+        let eff_price = state.effective_price(price);
+        let arrow = if selected { "> " } else { "  " };
+        draw_text(&format!("{}{}", arrow, name), bx + pad, ry, 17.0, color);
+        let info = format!("{}g +{}", eff_price, energy);
+        let iw = measure_text(&info, None, 14, 1.0).width;
+        draw_text(&info, bx + bw - iw - pad, ry, 14.0, color);
+    }
+
+    let hint = "W/S: Select   E: Order   Esc: Leave";
+    let hw = measure_text(hint, None, 12, 1.0).width;
+    draw_text(hint, bx + bw / 2.0 - hw / 2.0, by + bh - 8.0, 12.0, Color::from_hex(0x886644));
+}
+
 fn draw_horse_destinations(state: &GameState) {
     let sw = screen_width();
     let sh = screen_height();
@@ -309,6 +436,70 @@ fn draw_horse_destinations(state: &GameState) {
     draw_text(hint, bx + bw / 2.0 - hw / 2.0, by + bh - 8.0, 12.0, Color::from_hex(0x888888));
 }
 
+fn draw_pavilion(x: f32, y: f32) {
+    use crate::render::camera::TILE_SIZE;
+    let ts = TILE_SIZE;
+    let w = 4.0 * ts;
+    let h = 4.0 * ts;
+
+    // Floor — stone/wood platform
+    draw_rectangle(x + 2.0, y + ts * 0.5, w - 4.0, h - 4.0, Color::from_hex(0xc8b89a));
+    // Floor pattern — checkerboard
+    for r in 0..4 {
+        for c in 0..4 {
+            if (r + c) % 2 == 0 {
+                draw_rectangle(x + 2.0 + c as f32 * (w - 4.0) / 4.0, y + ts * 0.5 + r as f32 * (h - 4.0) / 4.0,
+                    (w - 4.0) / 4.0, (h - 4.0) / 4.0, Color::from_hex(0xb8a888));
+            }
+        }
+    }
+
+    // Four pillars (corners)
+    let pillar_w = 5.0;
+    let pillar_h = ts * 1.5;
+    let pillar_color = Color::from_hex(0xeeeeee);
+    let pillar_shadow = Color::from_hex(0xcccccc);
+    // Front-left
+    draw_rectangle(x + 6.0, y + ts * 0.2, pillar_w, pillar_h, pillar_color);
+    draw_rectangle(x + 6.0, y + ts * 0.2, 2.0, pillar_h, pillar_shadow);
+    // Front-right
+    draw_rectangle(x + w - 12.0, y + ts * 0.2, pillar_w, pillar_h, pillar_color);
+    draw_rectangle(x + w - 12.0, y + ts * 0.2, 2.0, pillar_h, pillar_shadow);
+    // Back-left
+    draw_rectangle(x + 6.0, y + h - ts * 0.8, pillar_w, pillar_h, pillar_color);
+    // Back-right
+    draw_rectangle(x + w - 12.0, y + h - ts * 0.8, pillar_w, pillar_h, pillar_color);
+
+    // Roof — peaked with overhang
+    let roof_color = Color::from_hex(0x8b2020);
+    let roof_light = Color::from_hex(0xa03030);
+    // Main roof rectangle
+    draw_rectangle(x - 4.0, y - ts * 0.6, w + 8.0, ts * 0.9, roof_color);
+    // Peaked top
+    draw_triangle(
+        Vec2::new(x + w / 2.0, y - ts * 1.1),
+        Vec2::new(x - 6.0, y - ts * 0.6),
+        Vec2::new(x + w + 6.0, y - ts * 0.6),
+        roof_light,
+    );
+    // Roof edge trim
+    draw_rectangle(x - 6.0, y - ts * 0.6, w + 12.0, 3.0, Color::from_hex(0xdeb887));
+
+    // Railing between pillars (front)
+    draw_rectangle(x + 11.0, y + ts * 0.8, w - 24.0, 3.0, Color::from_hex(0xdeb887));
+    draw_rectangle(x + 11.0, y + ts * 1.2, w - 24.0, 3.0, Color::from_hex(0xdeb887));
+
+    // "PAVILION" text on the front
+    draw_text("PAVILION", x + w * 0.18, y + ts * 0.15, 10.0, Color::from_hex(0x8b4513));
+
+    // Decorative hanging lantern
+    let lx = x + w / 2.0;
+    let ly = y + ts * 0.05;
+    draw_line(lx, y - ts * 0.5, lx, ly, 1.0, Color::from_hex(0x888888));
+    draw_rectangle(lx - 3.0, ly, 6.0, 8.0, Color::from_hex(0xf4d03f));
+    draw_rectangle(lx - 2.0, ly + 1.0, 4.0, 6.0, Color::from_hex(0xffe066));
+}
+
 fn draw_day_summary(summary: &crate::game::state::DaySummary) {
     let sw = screen_width();
     let sh = screen_height();
@@ -344,6 +535,12 @@ fn draw_world(state: &GameState, camera: &Camera, _is_right_half: bool) {
     } else {
         farm_view::draw(&state.map, camera, state.house_upgraded, state.clock.hour);
     }
+    // Pavilion (drawn over tiles, under characters)
+    if state.has_pavilion {
+        let (pvx, pvy) = camera.world_to_screen(28, 8);
+        draw_pavilion(pvx, pvy);
+    }
+
     animal_view::draw_farm_animals(state, camera);
     npc_view::draw(&state.npcs, camera);
     draw_birds(&state.birds, camera);

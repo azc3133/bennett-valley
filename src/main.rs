@@ -292,13 +292,72 @@ async fn main() {
                 }
             }
 
+            // P2 scythe long grass (facing or standing)
+            if !acted {
+                let facing_long = state.map.get(facing.0, facing.1)
+                    .map(|t| t.kind == bennett_valley::game::world::TileKind::LongGrass).unwrap_or(false);
+                let standing_long = state.map.get(p2col, p2row)
+                    .map(|t| t.kind == bennett_valley::game::world::TileKind::LongGrass).unwrap_or(false);
+                if facing_long || standing_long {
+                    let target = if facing_long { facing } else { (p2col, p2row) };
+                    if state.player2.spend_energy(2) {
+                        state.map.tiles[target.1][target.0].kind = bennett_valley::game::world::TileKind::Grass;
+                        let seed = (target.0.wrapping_mul(13).wrapping_add(target.1.wrapping_mul(7))
+                            .wrapping_add(state.clock.day as usize)) % 3 + 1;
+                        state.player2.inventory.add(bennett_valley::game::inventory::ItemKind::Fiber, seed as u32);
+                        state.notify(&format!("P2: +{} fiber", seed));
+                        game_save::play_sound("hoe");
+                        acted = true;
+                    }
+                }
+            }
+
+            // P2 chop tree (facing) — in Fall, acorn forage takes priority (handled below)
+            if !acted {
+                let facing_kind = state.map.get(facing.0, facing.1).map(|t| t.kind.clone());
+                let facing_tree = matches!(facing_kind, Some(bennett_valley::game::world::TileKind::OakTree) | Some(bennett_valley::game::world::TileKind::OakTreeEmpty));
+                // In Fall, skip chopping OakTree (let acorn forage handle it below); still chop OakTreeEmpty
+                let skip_for_acorns = season == bennett_valley::game::time::Season::Fall
+                    && matches!(facing_kind, Some(bennett_valley::game::world::TileKind::OakTree));
+                if facing_tree && !skip_for_acorns {
+                    if state.player2.spend_energy(4) {
+                        let hits_needed = 3u8;
+                        let (cc, cr, mut hits) = state.chop_progress
+                            .filter(|&(c, r, _)| c == facing.0 && r == facing.1)
+                            .unwrap_or((facing.0, facing.1, 0));
+                        hits += 1;
+                        if hits >= hits_needed {
+                            state.map.tiles[facing.1][facing.0].kind = bennett_valley::game::world::TileKind::Grass;
+                            state.chop_progress = None;
+                            let amt = (facing.0.wrapping_mul(13).wrapping_add(facing.1.wrapping_mul(7))
+                                .wrapping_add(state.clock.day as usize)) % 4 + 2;
+                            state.player2.inventory.add(bennett_valley::game::inventory::ItemKind::Wood, amt as u32);
+                            if state.clock.season == bennett_valley::game::time::Season::Fall {
+                                state.player2.inventory.add(
+                                    bennett_valley::game::inventory::ItemKind::Forage(
+                                        bennett_valley::game::inventory::ForageKind::Acorn), 1);
+                                state.notify(&format!("P2: Timber! +{} wood, +1 acorn", amt));
+                            } else {
+                                state.notify(&format!("P2: Timber! +{} wood", amt));
+                            }
+                            game_save::play_sound("hoe");
+                        } else {
+                            state.chop_progress = Some((cc, cr, hits));
+                            state.notify(&format!("P2: Chop! ({}/{})", hits, hits_needed));
+                            game_save::play_sound("hoe");
+                        }
+                        acted = true;
+                    }
+                }
+            }
+
             // Check facing tile
             if !acted {
                 if let Some(tile) = state.map.get(facing.0, facing.1) {
                     let kind = tile.kind.clone();
                     match kind {
                         bennett_valley::game::world::TileKind::OakTree => {
-                            // P2 forage oak tree for acorns
+                            // P2 forage oak tree for acorns (Fall only)
                             let cost = state.config.energy.forage_cost;
                             if farming::forage_oak(&mut state.map, &mut state.player2, facing.0, facing.1, cost, &season).is_ok() {
                                 game_save::play_sound("harvest");
@@ -327,6 +386,8 @@ async fn main() {
                                     state.open_restaurant();
                                 } else if bk == bennett_valley::game::state::BuildingKind::IceCreamShop {
                                     state.open_icecream();
+                                } else if bk == bennett_valley::game::state::BuildingKind::WizardHut {
+                                    state.open_wizard();
                                 } else {
                                     state.current_building = bk;
                                     state.phase = GamePhase::FarmhouseInterior;
@@ -732,6 +793,12 @@ async fn main() {
                     GamePhase::IceCreamShopOpen => {
                         state.icecream_order();
                     }
+                    GamePhase::TeaMenu => {
+                        state.tea_order();
+                    }
+                    GamePhase::WizardShop => {
+                        state.wizard_buy();
+                    }
                     GamePhase::ArcadePlaying => {
                         if state.arcade_phase == 2 {
                             // Play again
@@ -767,6 +834,8 @@ async fn main() {
                     else if state.phase == GamePhase::LetterReply { state.phase = GamePhase::LetterOpen; }
                     else if state.phase == GamePhase::RestaurantOpen { state.restaurant_close(); }
                     else if state.phase == GamePhase::IceCreamShopOpen { state.icecream_close(); }
+                    else if state.phase == GamePhase::TeaMenu { state.tea_close(); }
+                    else if state.phase == GamePhase::WizardShop { state.wizard_close(); }
                     else if state.phase == GamePhase::ArcadePlaying { state.arcade_close(); }
                     else if state.phase == GamePhase::ArenaEditor { state.close_arena_editor(); }
                     else if state.phase == GamePhase::FishingMinigame {
@@ -797,6 +866,10 @@ async fn main() {
                         state.restaurant_move_cursor(-1);
                     } else if state.phase == GamePhase::IceCreamShopOpen {
                         state.icecream_move_cursor(-1);
+                    } else if state.phase == GamePhase::TeaMenu {
+                        state.tea_move_cursor(-1);
+                    } else if state.phase == GamePhase::WizardShop {
+                        state.wizard_move_cursor(-1);
                     } else if state.phase == GamePhase::FestivalPlaying {
                         state.festival_move(0, -1);
                     } else if state.phase == GamePhase::DialogueChoice {
@@ -828,6 +901,10 @@ async fn main() {
                         state.restaurant_move_cursor(1);
                     } else if state.phase == GamePhase::IceCreamShopOpen {
                         state.icecream_move_cursor(1);
+                    } else if state.phase == GamePhase::TeaMenu {
+                        state.tea_move_cursor(1);
+                    } else if state.phase == GamePhase::WizardShop {
+                        state.wizard_move_cursor(1);
                     } else if state.phase == GamePhase::FestivalPlaying {
                         state.festival_move(0, 1);
                     } else if state.phase == GamePhase::DialogueChoice {

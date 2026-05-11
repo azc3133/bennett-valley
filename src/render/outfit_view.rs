@@ -6,11 +6,17 @@ pub fn draw(state: &GameState) {
     let sw = screen_width();
     let sh = screen_height();
 
-    let row_h = 40.0;
+    let row_h = 36.0;
     let header_h = 60.0;
     let footer_h = 40.0;
-    let total = OUTFITS.len();
-    let box_h = (header_h + total as f32 * row_h + footer_h).min(sh - 40.0);
+    // Build list of displayable outfit indices (skip Equestrian which is auto-only)
+    let displayable: Vec<usize> = (0..OUTFITS.len())
+        .filter(|&i| i != GameState::EQUESTRIAN_IDX)
+        .collect();
+    let total = displayable.len();
+    let max_visible = ((sh - 40.0 - header_h - footer_h) / row_h).floor() as usize;
+    let visible = max_visible.min(total);
+    let box_h = header_h + visible as f32 * row_h + footer_h;
     let box_w = 440.0f32.min(sw - 40.0);
     let box_x = sw / 2.0 - box_w / 2.0;
     let box_y = sh / 2.0 - box_h / 2.0;
@@ -40,9 +46,26 @@ pub fn draw(state: &GameState) {
         draw_text(&hair_text, box_x + box_w / 2.0 - htw / 2.0, box_y + 50.0, 12.0, Color::from_hex(0xddaadd));
     }
 
+    // Scroll window — keep cursor visible
+    let cursor = state.outfit_cursor;
+    // Find cursor position in the displayable list
+    let cursor_pos = displayable.iter().position(|&i| i == cursor).unwrap_or(0);
+    let scroll_start = if cursor_pos >= visible { cursor_pos - visible + 1 } else { 0 };
+    let scroll_end = (scroll_start + visible).min(total);
+
+    // Scroll indicators
+    if scroll_start > 0 {
+        draw_text("▲", box_x + box_w / 2.0 - 4.0, box_y + header_h - 2.0, 12.0, Color::from_hex(0x888888));
+    }
+    if scroll_end < total {
+        draw_text("▼", box_x + box_w / 2.0 - 4.0, box_y + box_h - footer_h + 10.0, 12.0, Color::from_hex(0x888888));
+    }
+
     let list_y = box_y + header_h;
-    for (i, outfit) in OUTFITS.iter().enumerate() {
-        let ry = list_y + i as f32 * row_h;
+    for (vi, di) in (scroll_start..scroll_end).enumerate() {
+        let i = displayable[di];
+        let outfit = &OUTFITS[i];
+        let ry = list_y + vi as f32 * row_h;
         let selected = i == state.outfit_cursor;
         let owned = state.owned_outfits.contains(&(i as u8));
         let equipped = state.player.outfit == i as u8;

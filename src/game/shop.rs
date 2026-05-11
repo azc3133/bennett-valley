@@ -73,6 +73,10 @@ pub fn make_default_shop(config: &crate::game::config::GameConfig) -> ShopInvent
     shop.add_item("gold_can",  2000, 0);
     // House extension
     shop.add_item("house_extension", 10000, 0);
+    // Greenhouse — all seeds available year-round
+    shop.add_item("greenhouse", 500000, 0);
+    // Pavilion — outdoor gazebo on the farm
+    shop.add_item("pavilion", 50000, 0);
     shop
 }
 

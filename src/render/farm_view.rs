@@ -126,6 +126,10 @@ fn draw_full(map: &FarmMap, camera: &Camera, house_upgraded: bool, hour: u8, rai
     let (icx, icy) = camera.world_to_screen(65, 21);
     draw_icecream_shop(icx, icy);
 
+    // Wizard's Hut
+    let (whx, why) = camera.world_to_screen(230, 133);
+    draw_wizard_hut(whx, why);
+
     // Beach decorations
     draw_beach(camera);
 
@@ -375,36 +379,99 @@ fn draw_bench(x: f32, y: f32) {
 }
 
 fn draw_oak_tree(x: f32, y: f32, col: usize, row: usize, has_acorns: bool) {
-    // Grass base
     draw_grass(x, y, col, row);
-    // Trunk — thicker, taller
-    draw_rectangle(x + 10.0, y + 12.0, 12.0, 22.0, Color::from_hex(0x6b4226));
-    // Bark detail
-    draw_line(x + 13.0, y + 14.0, x + 13.0, y + 32.0, 1.0, Color::from_hex(0x543218));
-    draw_line(x + 18.0, y + 16.0, x + 18.0, y + 30.0, 1.0, Color::from_hex(0x543218));
-    // Roots
-    draw_line(x + 8.0, y + 32.0, x + 10.0, y + 30.0, 2.0, Color::from_hex(0x5a3a1a));
-    draw_line(x + 22.0, y + 30.0, x + 24.0, y + 32.0, 2.0, Color::from_hex(0x5a3a1a));
-    // Canopy — bigger, fuller crown that overflows the tile
-    let canopy = Color::from_hex(0x2d7a2d);
-    let canopy_light = Color::from_hex(0x3d9a3d);
-    let canopy_dark = Color::from_hex(0x1e6a1e);
-    draw_circle(x + 16.0, y + 4.0, 16.0, canopy);
-    draw_circle(x + 6.0, y + 10.0, 12.0, canopy);
-    draw_circle(x + 26.0, y + 10.0, 12.0, canopy);
-    draw_circle(x + 16.0, y - 2.0, 10.0, canopy_light);
-    draw_circle(x + 8.0, y + 16.0, 8.0, canopy_dark);
-    draw_circle(x + 24.0, y + 16.0, 8.0, canopy_dark);
-    // Acorn indicators (small brown dots) when harvestable
+    // Pick tree variant based on position hash
+    let variant = (col.wrapping_mul(7).wrapping_add(row.wrapping_mul(13))) % 4;
+    match variant {
+        0 => draw_tree_oak(x, y),
+        1 => draw_tree_pine(x, y),
+        2 => draw_tree_maple(x, y),
+        _ => draw_tree_birch(x, y),
+    }
+    // Acorn indicators when harvestable
     if has_acorns {
         draw_circle(x + 5.0,  y + 18.0, 2.5, Color::from_hex(0x8b5e3c));
         draw_circle(x + 27.0, y + 17.0, 2.5, Color::from_hex(0x8b5e3c));
         draw_circle(x + 16.0, y + 22.0, 2.0, Color::from_hex(0x8b5e3c));
-        // Tiny acorn caps
         draw_circle(x + 5.0,  y + 17.0, 1.5, Color::from_hex(0x5a3a1a));
         draw_circle(x + 27.0, y + 16.0, 1.5, Color::from_hex(0x5a3a1a));
         draw_circle(x + 16.0, y + 21.0, 1.2, Color::from_hex(0x5a3a1a));
     }
+}
+
+/// Classic round oak — full, rounded canopy
+fn draw_tree_oak(x: f32, y: f32) {
+    // Trunk
+    draw_rectangle(x + 12.0, y + 14.0, 8.0, 20.0, Color::from_hex(0x6b4226));
+    draw_line(x + 14.0, y + 16.0, x + 14.0, y + 32.0, 1.0, Color::from_hex(0x543218));
+    draw_line(x + 18.0, y + 18.0, x + 18.0, y + 30.0, 1.0, Color::from_hex(0x543218));
+    // Roots
+    draw_line(x + 10.0, y + 32.0, x + 12.0, y + 30.0, 2.0, Color::from_hex(0x5a3a1a));
+    draw_line(x + 20.0, y + 30.0, x + 22.0, y + 32.0, 2.0, Color::from_hex(0x5a3a1a));
+    // Full rounded canopy
+    draw_circle(x + 16.0, y + 4.0, 16.0, Color::from_hex(0x2d7a2d));
+    draw_circle(x + 6.0, y + 10.0, 12.0, Color::from_hex(0x2d7a2d));
+    draw_circle(x + 26.0, y + 10.0, 12.0, Color::from_hex(0x2d7a2d));
+    draw_circle(x + 16.0, y - 2.0, 10.0, Color::from_hex(0x3d9a3d));
+    draw_circle(x + 8.0, y + 16.0, 8.0, Color::from_hex(0x1e6a1e));
+    draw_circle(x + 24.0, y + 16.0, 8.0, Color::from_hex(0x1e6a1e));
+}
+
+/// Tall pine/conifer — triangular shape, darker green
+fn draw_tree_pine(x: f32, y: f32) {
+    // Trunk — thin and tall
+    draw_rectangle(x + 14.0, y + 18.0, 4.0, 16.0, Color::from_hex(0x5a3818));
+    // Three layered triangles (bottom to top, getting smaller)
+    let dark = Color::from_hex(0x1a5a1a);
+    let mid = Color::from_hex(0x226b22);
+    let light = Color::from_hex(0x2d8a2d);
+    // Bottom layer
+    draw_triangle(Vec2::new(x + 16.0, y + 8.0), Vec2::new(x + 2.0, y + 22.0), Vec2::new(x + 30.0, y + 22.0), dark);
+    // Middle layer
+    draw_triangle(Vec2::new(x + 16.0, y + 2.0), Vec2::new(x + 5.0, y + 16.0), Vec2::new(x + 27.0, y + 16.0), mid);
+    // Top layer
+    draw_triangle(Vec2::new(x + 16.0, y - 4.0), Vec2::new(x + 8.0, y + 10.0), Vec2::new(x + 24.0, y + 10.0), light);
+    // Snow/tip highlight
+    draw_circle(x + 16.0, y - 3.0, 2.0, Color::from_hex(0x3daa3d));
+}
+
+/// Maple — wider, slightly orange-tinted canopy
+fn draw_tree_maple(x: f32, y: f32) {
+    // Trunk — medium, slightly angled
+    draw_rectangle(x + 11.0, y + 14.0, 7.0, 20.0, Color::from_hex(0x7a4a2a));
+    draw_rectangle(x + 15.0, y + 16.0, 5.0, 18.0, Color::from_hex(0x6a3a1a));
+    // Branch stubs
+    draw_line(x + 8.0, y + 18.0, x + 12.0, y + 14.0, 2.0, Color::from_hex(0x6a3a1a));
+    draw_line(x + 24.0, y + 16.0, x + 20.0, y + 14.0, 2.0, Color::from_hex(0x6a3a1a));
+    // Wide, fluffy canopy with warm tones
+    draw_circle(x + 16.0, y + 2.0, 15.0, Color::from_hex(0x3a8a2a));
+    draw_circle(x + 4.0, y + 8.0, 11.0, Color::from_hex(0x4a9a3a));
+    draw_circle(x + 28.0, y + 8.0, 11.0, Color::from_hex(0x4a9a3a));
+    draw_circle(x + 10.0, y + 14.0, 9.0, Color::from_hex(0x2a7a1a));
+    draw_circle(x + 22.0, y + 14.0, 9.0, Color::from_hex(0x2a7a1a));
+    // Warm highlight spots (slight autumn feel)
+    draw_circle(x + 16.0, y - 2.0, 7.0, Color::from_hex(0x5aaa4a));
+    draw_circle(x + 8.0, y + 4.0, 4.0, Color::from_hex(0x6ab858));
+}
+
+/// Birch — slender white trunk, small delicate canopy
+fn draw_tree_birch(x: f32, y: f32) {
+    // Trunk — thin, white/silver with dark knots
+    draw_rectangle(x + 14.0, y + 10.0, 4.0, 24.0, Color::from_hex(0xe8dcc8));
+    draw_rectangle(x + 14.0, y + 10.0, 4.0, 24.0, Color::from_hex(0xd4c8b4));
+    // Bark marks
+    draw_rectangle(x + 14.0, y + 14.0, 4.0, 2.0, Color::from_hex(0x888070));
+    draw_rectangle(x + 14.0, y + 20.0, 4.0, 1.5, Color::from_hex(0x888070));
+    draw_rectangle(x + 14.0, y + 26.0, 4.0, 1.5, Color::from_hex(0x888070));
+    // Delicate canopy — lighter green, airy
+    let leaf = Color::from_hex(0x5cb85c);
+    let leaf_light = Color::from_hex(0x7dd87d);
+    draw_circle(x + 16.0, y + 2.0, 12.0, leaf);
+    draw_circle(x + 8.0, y + 6.0, 8.0, leaf);
+    draw_circle(x + 24.0, y + 6.0, 8.0, leaf);
+    draw_circle(x + 16.0, y - 2.0, 7.0, leaf_light);
+    draw_circle(x + 6.0, y + 10.0, 5.0, leaf_light);
+    draw_circle(x + 26.0, y + 10.0, 5.0, leaf_light);
 }
 
 fn draw_fishing_spot(x: f32, y: f32) {
@@ -1063,6 +1130,69 @@ fn draw_pool(x: f32, y: f32) {
     draw_text("POOL", x + w * 0.35, y + ts * 0.7, 12.0, Color::from_hex(0x2980b9));
 }
 
+/// Wizard's Hut — mysterious cottage, 5×4 tiles
+fn draw_wizard_hut(x: f32, y: f32) {
+    let ts = TS;
+    let w = 5.0 * ts;
+    let h = 4.0 * ts;
+
+    // Shadow
+    draw_rectangle(x + 3.0, y + 3.0, w, h, Color { r: 0.0, g: 0.0, b: 0.0, a: 0.25 });
+
+    // Stone walls — dark gray/purple
+    draw_rectangle(x, y + ts * 0.5, w, h - ts * 0.5, Color::from_hex(0x3a2a4a));
+    // Stone texture
+    for i in 0..6 {
+        for j in 0..4 {
+            let sx = x + 4.0 + i as f32 * (w / 6.0);
+            let sy = y + ts * 0.6 + j as f32 * (h / 5.0);
+            draw_rectangle(sx, sy, w / 7.0, h / 7.0, Color::from_hex(0x4a3a5a));
+        }
+    }
+
+    // Pointed roof — dark purple with stars
+    let roof_peak = y - ts * 0.8;
+    draw_triangle(
+        Vec2::new(x + w / 2.0, roof_peak),
+        Vec2::new(x - 6.0, y + ts * 0.5),
+        Vec2::new(x + w + 6.0, y + ts * 0.5),
+        Color::from_hex(0x2a1a3a),
+    );
+    // Stars on roof
+    draw_circle(x + w * 0.3, y - ts * 0.1, 2.0, Color::from_hex(0xf4d03f));
+    draw_circle(x + w * 0.7, y + ts * 0.1, 1.5, Color::from_hex(0xf4d03f));
+    draw_circle(x + w * 0.5, y - ts * 0.4, 2.5, Color::from_hex(0xf4d03f));
+
+    // Moon on roof peak
+    draw_circle(x + w / 2.0 + 2.0, roof_peak + 6.0, 5.0, Color::from_hex(0xeedd88));
+    draw_circle(x + w / 2.0 + 4.0, roof_peak + 5.0, 4.0, Color::from_hex(0x2a1a3a)); // crescent cutout
+
+    // Door — arched, glowing
+    let dw = ts * 0.6;
+    let dh = ts * 1.0;
+    let dx = x + w / 2.0 - dw / 2.0;
+    let dy = y + h - dh;
+    draw_rectangle(dx, dy, dw, dh, Color::from_hex(0x5a3a1a));
+    draw_circle(dx + dw / 2.0, dy, dw / 2.0, Color::from_hex(0x5a3a1a)); // arch top
+    // Glow from inside
+    draw_rectangle(dx + 3.0, dy + 4.0, dw - 6.0, dh - 6.0, Color::from_hex(0x8866aa));
+    draw_circle(dx + dw / 2.0, dy + 2.0, dw / 2.0 - 3.0, Color::from_hex(0x8866aa));
+
+    // Window — round, glowing
+    draw_circle(x + w * 0.2, y + ts * 1.0, 6.0, Color::from_hex(0x222222));
+    draw_circle(x + w * 0.2, y + ts * 1.0, 4.5, Color::from_hex(0xaa88cc));
+    draw_circle(x + w * 0.8, y + ts * 1.0, 6.0, Color::from_hex(0x222222));
+    draw_circle(x + w * 0.8, y + ts * 1.0, 4.5, Color::from_hex(0xaa88cc));
+
+    // Smoke/magic particles above chimney
+    draw_circle(x + w * 0.75, roof_peak - 6.0, 3.0, Color { r: 0.6, g: 0.4, b: 0.8, a: 0.4 });
+    draw_circle(x + w * 0.78, roof_peak - 14.0, 2.5, Color { r: 0.6, g: 0.4, b: 0.8, a: 0.3 });
+    draw_circle(x + w * 0.72, roof_peak - 20.0, 2.0, Color { r: 0.6, g: 0.4, b: 0.8, a: 0.2 });
+
+    // "WIZARD" text
+    draw_text("WIZARD", x + w * 0.2, y + h + 10.0, 10.0, Color::from_hex(0xaa88cc));
+}
+
 /// Beach decorations — umbrellas, towels, lifeguard chair, surfboard, shells
 fn draw_beach(camera: &Camera) {
     let ts = TS;
@@ -1095,21 +1225,26 @@ fn draw_beach(camera: &Camera) {
         draw_rectangle(x + 2.0, y + ts * 0.75, ts * 0.8, 2.0, Color::from_hex(0xffffff));
     };
 
-    // Umbrellas
-    draw_umbrella(88, 59, 0xe74c3c, 0xffffff);  // red/white
-    draw_umbrella(96, 60, 0x3498db, 0xf1c40f);  // blue/yellow
-    draw_umbrella(104, 59, 0x2ecc71, 0xffffff); // green/white
-    draw_umbrella(110, 60, 0xff69b4, 0xffffff); // pink/white
+    // Umbrellas — spread across the wide beach
+    draw_umbrella(90, 125, 0xe74c3c, 0xffffff);
+    draw_umbrella(108, 126, 0x3498db, 0xf1c40f);
+    draw_umbrella(130, 125, 0x2ecc71, 0xffffff);
+    draw_umbrella(148, 126, 0xff69b4, 0xffffff);
+    draw_umbrella(170, 125, 0xf39c12, 0xffffff);
+    draw_umbrella(190, 126, 0x9b59b6, 0xffffff);
+    draw_umbrella(210, 125, 0xe74c3c, 0xf1c40f);
 
     // Towels
-    draw_towel(89, 60, 0xff6347);  // coral
-    draw_towel(97, 61, 0x4169e1);  // royal blue
-    draw_towel(105, 60, 0xffd700); // gold
-    draw_towel(111, 61, 0xff1493); // deep pink
+    draw_towel(91, 126, 0xff6347);
+    draw_towel(109, 127, 0x4169e1);
+    draw_towel(131, 126, 0xffd700);
+    draw_towel(149, 127, 0xff1493);
+    draw_towel(171, 126, 0x2ecc71);
+    draw_towel(191, 127, 0xff6347);
 
-    // Lifeguard chair (col 100, row 58)
+    // Lifeguard chair (col 120, row 124)
     {
-        let (x, y) = camera.world_to_screen(100, 58);
+        let (x, y) = camera.world_to_screen(120, 124);
         // Legs
         draw_rectangle(x + 4.0, y + 4.0, 3.0, ts - 4.0, Color::from_hex(0xdeb887));
         draw_rectangle(x + ts - 8.0, y + 4.0, 3.0, ts - 4.0, Color::from_hex(0xdeb887));
@@ -1123,9 +1258,20 @@ fn draw_beach(camera: &Camera) {
         draw_rectangle(x + ts - 6.0, y - 12.0, 8.0, 6.0, Color::from_hex(0xe74c3c));
     }
 
-    // Surfboard (col 84, row 60)
+    // Second lifeguard chair (col 180, row 124)
     {
-        let (x, y) = camera.world_to_screen(84, 60);
+        let (x, y) = camera.world_to_screen(180, 124);
+        draw_rectangle(x + 4.0, y + 4.0, 3.0, ts - 4.0, Color::from_hex(0xdeb887));
+        draw_rectangle(x + ts - 8.0, y + 4.0, 3.0, ts - 4.0, Color::from_hex(0xdeb887));
+        draw_line(x + 5.0, y + ts * 0.7, x + ts - 7.0, y + ts * 0.4, 2.0, Color::from_hex(0xdeb887));
+        draw_rectangle(x + 1.0, y + 2.0, ts - 3.0, 5.0, Color::from_hex(0xc19a6b));
+        draw_rectangle(x + ts - 8.0, y - 6.0, 3.0, 10.0, Color::from_hex(0xc19a6b));
+        draw_rectangle(x + ts - 6.0, y - 12.0, 8.0, 6.0, Color::from_hex(0xe74c3c));
+    }
+
+    // Surfboard (col 86, row 126)
+    {
+        let (x, y) = camera.world_to_screen(86, 126);
         // Board leaning at angle
         draw_rectangle(x + 4.0, y - 4.0, 5.0, ts + 4.0, Color::from_hex(0x00bfff));
         // Stripe
@@ -1139,9 +1285,9 @@ fn draw_beach(camera: &Camera) {
         );
     }
 
-    // Sandcastle (col 93, row 62)
+    // Sandcastle (col 140, row 128)
     {
-        let (x, y) = camera.world_to_screen(93, 62);
+        let (x, y) = camera.world_to_screen(140, 128);
         // Base mound
         draw_rectangle(x + 4.0, y + ts * 0.4, ts * 0.6, ts * 0.5, Color::from_hex(0xf4d03f));
         // Towers
@@ -1162,8 +1308,9 @@ fn draw_beach(camera: &Camera) {
 
     // Shells scattered on sand
     let shell_spots: &[(usize, usize)] = &[
-        (87, 61), (91, 63), (99, 62), (103, 63), (108, 62), (113, 63),
-        (86, 63), (95, 63), (101, 61), (107, 61),
+        (89, 128), (95, 129), (103, 128), (115, 129), (125, 128), (135, 129),
+        (145, 128), (155, 129), (165, 128), (175, 129), (185, 128), (195, 129),
+        (205, 128), (215, 129), (100, 130), (150, 130), (200, 130),
     ];
     for &(col, row) in shell_spots {
         let (x, y) = camera.world_to_screen(col, row);
@@ -1178,9 +1325,9 @@ fn draw_beach(camera: &Camera) {
         draw_circle(x + ts * 0.5, y + ts * 0.5, 2.0, color);
     }
 
-    // "BEACH" sign at entrance (col 96, row 57)
+    // "BEACH" sign at entrance (col 120, row 123)
     {
-        let (x, y) = camera.world_to_screen(96, 57);
+        let (x, y) = camera.world_to_screen(120, 123);
         // Sign post
         draw_rectangle(x + ts * 0.4, y + 2.0, 3.0, ts - 2.0, Color::from_hex(0x8b7355));
         // Sign board

@@ -204,5 +204,6 @@ fn item_label(item: &ItemKind) -> String {
         ItemKind::Egg => "egg".to_string(),
         ItemKind::Milk => "milk".to_string(),
         ItemKind::Fiber => "fiber".to_string(),
+        ItemKind::Wood => "wood".to_string(),
     }
 }

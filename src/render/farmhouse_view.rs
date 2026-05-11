@@ -56,6 +56,7 @@ pub fn draw(state: &GameState) {
         BuildingKind::Arcade => {}
         BuildingKind::Restaurant => {}
         BuildingKind::IceCreamShop => {}
+        BuildingKind::WizardHut => {}
     }
 
     // Player character (same for all interiors)

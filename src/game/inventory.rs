@@ -15,6 +15,8 @@ pub enum ItemKind {
     Milk,
     /// Fiber from scything long grass. Can be sold.
     Fiber,
+    /// Wood from chopping trees. Can be sold.
+    Wood,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

@@ -34,6 +34,8 @@ pub struct SaveData {
     pub ships_today: u32,
     pub married_npc_id: Option<u8>,
     #[serde(default)]
+    pub married_npc_id_p2: Option<u8>,
+    #[serde(default)]
     pub house_upgraded: bool,
     #[serde(default)]
     pub owned_furniture: Vec<String>,
@@ -41,6 +43,10 @@ pub struct SaveData {
     pub owned_animals: Vec<String>,
     #[serde(default)]
     pub has_equestrian_center: bool,
+    #[serde(default)]
+    pub has_greenhouse: bool,
+    #[serde(default)]
+    pub has_pavilion: bool,
     #[serde(default)]
     pub arena_jumps: Vec<(u8, u8, u8)>,
     #[serde(default)]
@@ -66,6 +72,7 @@ pub fn item_to_key(item: &ItemKind) -> String {
         ItemKind::Egg       => "egg".to_string(),
         ItemKind::Milk      => "milk".to_string(),
         ItemKind::Fiber     => "fiber".to_string(),
+        ItemKind::Wood      => "wood".to_string(),
     }
 }
 
@@ -74,6 +81,7 @@ pub fn item_from_key(key: &str) -> Option<ItemKind> {
     if key == "egg" { return Some(ItemKind::Egg); }
     if key == "milk" { return Some(ItemKind::Milk); }
     if key == "fiber" { return Some(ItemKind::Fiber); }
+    if key == "wood" { return Some(ItemKind::Wood); }
     let (prefix, name) = key.split_once(':')?;
     match prefix {
         "seed" => Some(ItemKind::Seed(match name {

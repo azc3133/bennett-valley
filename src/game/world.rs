@@ -93,7 +93,7 @@ impl FarmMap {
 
     /// Build the default farm layout.
     ///
-    /// Map: 120 × 70 tiles
+    /// Map: 240 × 140 tiles
     ///
     /// Zones (original, cols 0-39, rows 0-29):
     ///   North shore  (row 0)                — Water border + fishing spots
@@ -114,31 +114,31 @@ impl FarmMap {
     ///   South wilds   (rows 30-49)            — forage + paths
     ///   Bottom shore  (row 49)                — water border
     pub fn default_farm() -> Self {
-        let mut map = FarmMap::new(120, 70);
+        let mut map = FarmMap::new(240, 140);
 
         // ── Water borders ─────────────────────────────────────────────────
-        for col in 0..120 {
+        for col in 0..240 {
             map.tiles[0][col].kind  = TileKind::Water; // top
-            map.tiles[69][col].kind = TileKind::Water; // bottom
+            map.tiles[139][col].kind = TileKind::Water; // bottom
         }
-        for row in 0..70 {
+        for row in 0..140 {
             map.tiles[row][0].kind  = TileKind::Water; // left
-            map.tiles[row][119].kind = TileKind::Water; // right
+            map.tiles[row][239].kind = TileKind::Water; // right
         }
 
-        // East river (cols 76-79, rows 0-69) — runs through the middle now
-        for row in 0..70 {
+        // East river (cols 76-79, rows 0-139) — runs through the map
+        for row in 0..140 {
             for col in 76..80 {
                 map.tiles[row][col].kind = TileKind::Water;
             }
         }
         // East river fishing spots (left bank)
-        for &row in &[5usize, 12, 19, 26, 34, 41, 50, 58, 65] {
-            map.tiles[row][75].kind = TileKind::FishingSpot;
+        for &row in &[5usize, 12, 19, 26, 34, 41, 50, 58, 65, 75, 85, 95, 105, 115, 125, 135] {
+            if row < 140 { map.tiles[row][75].kind = TileKind::FishingSpot; }
         }
         // East river fishing spots (right bank)
-        for &row in &[8usize, 16, 24, 32, 40, 48, 56, 63] {
-            map.tiles[row][80].kind = TileKind::FishingSpot;
+        for &row in &[8usize, 16, 24, 32, 40, 48, 56, 63, 72, 80, 90, 100, 110, 120, 130] {
+            if row < 140 { map.tiles[row][80].kind = TileKind::FishingSpot; }
         }
 
         // ── Inland pond (rows 24-27, cols 7-12) ─────────────────────────
@@ -161,7 +161,7 @@ impl FarmMap {
             (16,32),(22,32),(28,32),(34,32),(40,32),      // north bank
             (16,44),(22,44),(28,44),(34,44),(40,44),      // south bank
         ] {
-            if row < 70 && col < 120 {
+            if row < 140 && col < 240 {
                 map.tiles[row][col].kind = TileKind::FishingSpot;
             }
         }
@@ -175,7 +175,7 @@ impl FarmMap {
 
         // ── Paths ─────────────────────────────────────────────────────────
         // South road (row 29, full width)
-        for col in 1..119 {
+        for col in 1..239 {
             map.tiles[29][col].kind = TileKind::Path;
         }
         // East-west connector (row 20) — farm/wilderness boundary
@@ -229,26 +229,40 @@ impl FarmMap {
         // Bridge across river (row 29, already covered by south road)
 
         // East district streets
-        for col in 80..118 {
+        for col in 80..238 {
             map.tiles[6][col].kind  = TileKind::Path; // north street
             map.tiles[13][col].kind = TileKind::Path; // mid street
             map.tiles[20][col].kind = TileKind::Path; // south street
         }
-        // East cross streets (cols 88, 96, 104, 112)
-        for &col in &[88usize, 96, 104, 112] {
-            for row in 1..28 {
-                map.tiles[row][col].kind = TileKind::Path;
+        // East cross streets
+        for &col in &[88usize, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232] {
+            if col < 240 {
+                for row in 1..28 {
+                    map.tiles[row][col].kind = TileKind::Path;
+                }
             }
         }
 
         // ── South expansion paths ────────────────────────────────────────
-        // South connector road (col 40, rows 29-68)
-        for row in 29..69 {
+        // South connector road (col 40, rows 29-138)
+        for row in 29..139 {
             map.tiles[row][40].kind = TileKind::Path;
         }
-        // Far south road (row 50, cols 1-118)
-        for col in 1..119 {
+        // Far south road (row 50, cols 1-238)
+        for col in 1..239 {
             map.tiles[50][col].kind = TileKind::Path;
+        }
+        // Additional south roads
+        for col in 1..239 {
+            map.tiles[70][col].kind = TileKind::Path;
+            map.tiles[100][col].kind = TileKind::Path;
+            map.tiles[130][col].kind = TileKind::Path;
+        }
+        // Vertical connector roads in south expansion
+        for &col in &[80usize, 120, 160, 200] {
+            for row in 29..139 {
+                if col < 240 { map.tiles[row][col].kind = TileKind::Path; }
+            }
         }
 
         // ── Structures ────────────────────────────────────────────────────
@@ -327,7 +341,7 @@ impl FarmMap {
         for &(col, row) in npc_houses {
             for r in row..row+2 {
                 for c in col..col+3 {
-                    if r < 70 && c < 120 {
+                    if r < 140 && c < 240 {
                         map.tiles[r][c].kind = TileKind::Farmhouse;
                     }
                 }
@@ -409,7 +423,7 @@ impl FarmMap {
             (74, 20),
         ];
         for &(col, row) in bench_coords {
-            if row < 70 && col < 120 {
+            if row < 140 && col < 240 {
                 map.tiles[row][col].kind = TileKind::Bench;
             }
         }
@@ -468,7 +482,7 @@ impl FarmMap {
             (62,11),(63,11),(62,12),
         ];
         for &(col, row) in forage_coords {
-            if row < 70 && col < 120 {
+            if row < 140 && col < 240 {
                 map.tiles[row][col].kind = TileKind::ForagePatch;
             }
         }
@@ -495,8 +509,28 @@ impl FarmMap {
             (74, 4), (74, 10), (74, 16),
         ];
         for &(col, row) in oak_coords {
-            if row < 70 && col < 120 {
+            if row < 140 && col < 240 {
                 map.tiles[row][col].kind = TileKind::OakTree;
+            }
+        }
+
+        // ── Farm rocks (scattered across cols 4-22, rows 5-19) ───────────
+        let farm_rocks: &[(usize, usize)] = &[
+            (5, 5), (8, 6), (12, 5), (18, 6),
+            (6, 9), (10, 8), (14, 9), (19, 8),
+            (4, 12), (9, 11), (15, 12), (21, 11),
+            (7, 14), (11, 15), (17, 14), (22, 15),
+            (5, 17), (13, 18), (20, 17),
+            // South farm area (rows 21-27)
+            (5, 22), (10, 21), (16, 22), (21, 21),
+            (7, 25), (12, 26), (18, 25),
+            (4, 27), (14, 27), (20, 27),
+        ];
+        for &(col, row) in farm_rocks {
+            if map.tiles[row][col].kind == TileKind::Grass
+                || map.tiles[row][col].kind == TileKind::LongGrass
+            {
+                map.tiles[row][col].kind = TileKind::Rock(3);
             }
         }
 
@@ -534,47 +568,22 @@ impl FarmMap {
             map.tiles[row][48].kind = TileKind::Path;
         }
         let rock_coords_deep: &[(usize, usize)] = &[
-            // Entry cluster
-            (49,22),(50,22),(51,22),(52,22),(53,22),(54,22),
-            (49,23),(51,23),(53,23),(55,23),
-            (50,24),(52,24),(54,24),(56,24),
-            // West cluster
-            (49,26),(50,26),(51,26),(52,26),
-            (49,27),(51,27),
-            (50,28),(52,28),(49,29),(51,29),
-            (50,30),(52,30),(53,29),
-            // Central cluster
-            (56,25),(57,25),(58,25),(59,25),(60,25),(61,25),
-            (56,26),(58,26),(60,26),(62,26),
-            (57,27),(59,27),(61,27),(63,27),
-            (56,28),(58,28),(60,28),(62,28),
-            (57,29),(59,29),(61,29),
-            (58,30),(60,30),
-            // East cluster (skip ice cream shop area: cols 65-69, rows 21-23)
-            (64,22),(70,22),
-            (64,23),(70,23),
-            (65,24),(67,24),(69,24),(71,24),
-            (64,25),(66,25),(68,25),(70,25),(72,25),(74,25),
-            (65,26),(67,26),(69,26),(71,26),(73,26),
-            (64,27),(66,27),(68,27),(70,27),(72,27),
-            (65,28),(67,28),(69,28),(71,28),
-            // Deep south cluster
-            (50,32),(52,32),(54,32),(56,32),(58,32),(60,32),
-            (51,33),(53,33),(55,33),(57,33),(59,33),
-            (50,34),(52,34),(54,34),(56,34),(58,34),
-            (51,35),(53,35),(55,35),(57,35),
-            (52,36),(54,36),(56,36),
-            (53,37),(55,37),
+            // Sparse south cluster (away from town)
+            (50,32),(54,32),(58,32),
+            (51,33),(55,33),(59,33),
+            (50,34),(54,34),(58,34),
+            (53,35),(57,35),
+            (52,36),(56,36),
+            (55,37),
             // Far east deep
-            (64,30),(66,30),(68,30),(70,30),(72,30),(74,30),
-            (65,31),(67,31),(69,31),(71,31),(73,31),
-            (64,32),(66,32),(68,32),(70,32),(72,32),
-            (65,33),(67,33),(69,33),(71,33),
-            (66,34),(68,34),(70,34),
-            (67,35),(69,35),(68,36),
+            (64,30),(68,30),(72,30),
+            (65,31),(69,31),(73,31),
+            (66,32),(70,32),
+            (67,33),(71,33),
+            (68,34),(70,34),
         ];
         for &(col, row) in rock_coords_deep {
-            if row < 70 && col < 76 {
+            if row < 140 && col < 76 {
                 map.tiles[row][col].kind = TileKind::Rock(3);
             }
         }
@@ -616,14 +625,14 @@ impl FarmMap {
             (107,15),(107,17),(107,19),
             (102,14),(104,14),
         ] {
-            if row < 70 && col < 120 {
+            if row < 140 && col < 240 {
                 map.tiles[row][col].kind = TileKind::FishingSpot;
             }
         }
 
         // East benches
         for &(col, row) in &[(85usize,6usize),(93,6),(101,6),(109,6),(85,13),(93,13),(109,13),(98,20)] {
-            if row < 70 && col < 120 {
+            if row < 140 && col < 240 {
                 map.tiles[row][col].kind = TileKind::Bench;
             }
         }
@@ -638,7 +647,7 @@ impl FarmMap {
             (82,32),(88,34),(94,32),(100,34),(106,32),(112,34),
             (85,40),(92,42),(98,40),(104,42),(110,40),(116,42),
         ] {
-            if row < 70 && col < 120 {
+            if row < 140 && col < 240 {
                 map.tiles[row][col].kind = TileKind::OakTree;
             }
         }
@@ -654,7 +663,7 @@ impl FarmMap {
             (83,38),(90,39),(96,38),(103,39),(109,38),(115,39),
             (85,45),(91,46),(97,45),(103,46),(109,45),(115,46),
         ] {
-            if row < 70 && col < 120 {
+            if row < 140 && col < 240 {
                 map.tiles[row][col].kind = TileKind::ForagePatch;
             }
         }
@@ -673,7 +682,7 @@ impl FarmMap {
             (44,62),(50,64),(56,62),(62,64),(68,62),(74,64),
             (46,67),(52,66),(58,67),(64,66),(70,67),
         ] {
-            if row < 70 && col < 120 {
+            if row < 140 && col < 240 {
                 map.tiles[row][col].kind = TileKind::OakTree;
             }
         }
@@ -685,7 +694,7 @@ impl FarmMap {
             (44,51),(50,53),(56,51),(62,53),(68,51),(74,53),
             (46,55),(52,57),(58,55),(64,57),(70,55),
         ] {
-            if row < 70 && col < 120 {
+            if row < 140 && col < 240 {
                 map.tiles[row][col].kind = TileKind::ForagePatch;
             }
         }
@@ -700,72 +709,84 @@ impl FarmMap {
         for &(col, row) in &[
             (16usize,49usize),(22,49),(28,49),(34,49),(40,49),
         ] {
-            if row < 70 && col < 120 {
+            if row < 140 && col < 240 {
                 map.tiles[row][col].kind = TileKind::FishingSpot;
             }
         }
 
         // South benches
         for &(col, row) in &[(10usize,50usize),(46,50),(20,50),(30,50)] {
-            if row < 70 && col < 120 {
+            if row < 140 && col < 240 {
                 map.tiles[row][col].kind = TileKind::Bench;
             }
         }
 
-        // ── Beach (cols 82-116, rows 55-68) ─────────────────────────────
-        // Sand (Path tiles)
-        for row in 58..65 {
-            for col in 82..117 {
-                if map.tiles[row][col].kind == TileKind::Grass
-                    || map.tiles[row][col].kind == TileKind::LongGrass
-                {
+        // ── Beach (cols 82-220, rows 120-138) — wide south coastline ────
+        // Sand (Path tiles) — big sandy area
+        for row in 124..133 {
+            for col in 82..221 {
+                map.tiles[row][col].kind = TileKind::Path;
+            }
+        }
+        // Curved shoreline — wider sand at edges
+        for col in 84..219 {
+            let mid = 151.0;
+            let curve = ((col as f32 - mid) / 70.0).powi(2);
+            let sand_start = 121 + (curve * 4.0) as usize;
+            for row in sand_start..124 {
+                if row < 140 {
                     map.tiles[row][col].kind = TileKind::Path;
                 }
             }
         }
-        // Curved shoreline — wider sand at edges, narrower in middle
-        for col in 84..115 {
-            let curve = ((col as f32 - 99.0) / 15.0).powi(2);
-            let sand_start = 56 + (curve * 3.0) as usize;
-            for row in sand_start..58 {
-                if row < 70 && map.tiles[row][col].kind == TileKind::Grass {
-                    map.tiles[row][col].kind = TileKind::Path;
-                }
-            }
-        }
-        // Ocean water (rows 65-68)
-        for row in 65..69 {
-            for col in 80..118 {
+        // Ocean water (rows 133-138)
+        for row in 133..139 {
+            for col in 80..222 {
                 map.tiles[row][col].kind = TileKind::Water;
             }
         }
-        // Shallow water (row 64) — still water but lighter blue drawn
-        for col in 82..117 {
-            map.tiles[64][col].kind = TileKind::Water;
+        // Shallow water (row 132)
+        for col in 82..221 {
+            map.tiles[132][col].kind = TileKind::Water;
         }
         // Beach fishing spots (along waterline)
-        for &col in &[86usize, 92, 98, 104, 110] {
-            map.tiles[63][col].kind = TileKind::FishingSpot;
+        for &col in &[86usize, 96, 106, 116, 126, 136, 146, 156, 166, 176, 186, 196, 206, 216] {
+            if col < 240 { map.tiles[131][col].kind = TileKind::FishingSpot; }
         }
         // Beach benches
-        for &(col, row) in &[(85usize,58usize),(95,58),(105,58),(112,58)] {
-            map.tiles[row][col].kind = TileKind::Bench;
+        for &col in &[88usize, 100, 112, 124, 140, 156, 172, 188, 204] {
+            if col < 240 { map.tiles[124][col].kind = TileKind::Bench; }
         }
-        // Path to beach from south road (col 96, rows 50-57)
-        for row in 51..58 {
-            map.tiles[row][96].kind = TileKind::Path;
+        // Path to beach from south road (col 120, rows 100-123)
+        for row in 101..124 {
+            map.tiles[row][120].kind = TileKind::Path;
+        }
+        // Second path (col 160)
+        for row in 101..124 {
+            map.tiles[row][160].kind = TileKind::Path;
         }
         // Clear any trees/forage that landed on the beach
-        for row in 56..69 {
-            for col in 82..118 {
+        for row in 120..139 {
+            for col in 82..221 {
                 if matches!(map.tiles[row][col].kind,
                     TileKind::OakTree | TileKind::OakTreeEmpty |
                     TileKind::ForagePatch | TileKind::ForagePatchEmpty |
-                    TileKind::LongGrass
+                    TileKind::LongGrass | TileKind::Rock(_)
                 ) {
                     map.tiles[row][col].kind = TileKind::Path;
                 }
             }
+        }
+
+        // ── Wizard's Hut (cols 230-234, rows 133-136) ────────────────
+        for row in 133..137 {
+            for col in 230..235 {
+                map.tiles[row][col].kind = TileKind::Farmhouse;
+            }
+        }
+        // Path to wizard from south road (col 232, rows 130-132)
+        for row in 130..133 {
+            map.tiles[row][232].kind = TileKind::Path;
         }
 
         // East rocks (small mine extension)
@@ -773,8 +794,108 @@ impl FarmMap {
             (83usize,27usize),(85,27),(87,27),(89,27),
             (84,28),(86,28),(88,28),
         ] {
-            if row < 70 && col < 120 {
+            if row < 140 && col < 240 {
                 map.tiles[row][col].kind = TileKind::Rock(3);
+            }
+        }
+
+        // ── Dense tree coverage across entire map ─────────────────────
+        // Uses a hash to place trees procedurally — denser than before
+        for row in 2..138 {
+            for col in 2..238 {
+                if map.tiles[row][col].kind != TileKind::Grass
+                    && map.tiles[row][col].kind != TileKind::LongGrass {
+                    continue;
+                }
+                let h = col.wrapping_mul(31).wrapping_add(row.wrapping_mul(17))
+                    .wrapping_add(col.wrapping_mul(row).wrapping_mul(7));
+                // Different density for different zones
+                let threshold = if col < 4 || row < 4 {
+                    5  // very dense forest edge
+                } else if col < 40 && row < 30 {
+                    12 // farm area — moderate (leave room for farming)
+                } else if col >= 80 && col < 120 && row < 30 {
+                    8  // east district — moderate-dense
+                } else if row >= 30 && row < 70 {
+                    7  // south wilderness — dense
+                } else {
+                    5  // deep south + far east — very dense forest
+                };
+                if h % threshold == 0 {
+                    map.tiles[row][col].kind = TileKind::OakTree;
+                }
+            }
+        }
+
+        // ── Forage patches across expanded areas ────────────────────
+        for row in 2..138 {
+            for col in 2..238 {
+                if map.tiles[row][col].kind != TileKind::Grass
+                    && map.tiles[row][col].kind != TileKind::LongGrass {
+                    continue;
+                }
+                let h = col.wrapping_mul(43).wrapping_add(row.wrapping_mul(29));
+                if h % 18 == 0 {
+                    map.tiles[row][col].kind = TileKind::ForagePatch;
+                }
+            }
+        }
+
+        // Deep south benches
+        for &(col, row) in &[
+            (10usize,70usize),(30,70),(50,70),(70,70),(90,70),(110,70),
+            (10,100),(30,100),(50,100),(70,100),(90,100),(110,100),
+            (10,130),(30,130),(50,130),(70,130),(90,130),(110,130),
+        ] {
+            if row < 140 && col < 240 { map.tiles[row][col].kind = TileKind::Bench; }
+        }
+
+        // Deep south lakes
+        // Lake at cols 20-35, rows 80-88
+        for row in 80..89 {
+            for col in 20..36 {
+                if row < 140 && col < 240 { map.tiles[row][col].kind = TileKind::Water; }
+            }
+        }
+        for &(col, row) in &[(19usize,82usize),(19,85),(36,82),(36,85),(25,79),(30,79),(25,89),(30,89)] {
+            if row < 140 && col < 240 { map.tiles[row][col].kind = TileKind::FishingSpot; }
+        }
+        // Lake at cols 50-65, rows 110-118
+        for row in 110..119 {
+            for col in 50..66 {
+                if row < 140 && col < 240 { map.tiles[row][col].kind = TileKind::Water; }
+            }
+        }
+        for &(col, row) in &[(49usize,112usize),(49,115),(66,112),(66,115),(55,109),(60,109),(55,119),(60,119)] {
+            if row < 140 && col < 240 { map.tiles[row][col].kind = TileKind::FishingSpot; }
+        }
+
+        // Scatter rocks in the deep south
+        for row_base in &[75usize, 88, 95, 105, 118, 125, 135] {
+            for col_step in 0..15 {
+                let col = 8 + col_step * 10;
+                let row = row_base + (col_step % 2);
+                if row < 139 && col < 76 && map.tiles[row][col].kind == TileKind::Grass {
+                    map.tiles[row][col].kind = TileKind::Rock(3);
+                }
+            }
+        }
+
+        // Long grass in the new areas
+        for row in 70..138 {
+            for col in 1..75 {
+                if map.tiles[row][col].kind == TileKind::Grass {
+                    let h = col.wrapping_mul(11).wrapping_add(row.wrapping_mul(23));
+                    if h % 7 == 0 { map.tiles[row][col].kind = TileKind::LongGrass; }
+                }
+            }
+        }
+        for row in 1..138 {
+            for col in 120..238 {
+                if map.tiles[row][col].kind == TileKind::Grass {
+                    let h = col.wrapping_mul(13).wrapping_add(row.wrapping_mul(19));
+                    if h % 8 == 0 { map.tiles[row][col].kind = TileKind::LongGrass; }
+                }
             }
         }
 

@@ -173,9 +173,9 @@
       "name": "Petra",
       "personality": "stoic",
       "schedule": [
-        { "start_hour": 6, "end_hour": 12, "tile": [48, 21] },
-        { "start_hour": 12, "end_hour": 19, "tile": [55, 22] },
-        { "start_hour": 19, "end_hour": 26, "tile": [48, 20] }
+        { "start_hour": 6, "end_hour": 12, "tile": [75, 26] },
+        { "start_hour": 12, "end_hour": 19, "tile": [55, 30] },
+        { "start_hour": 19, "end_hour": 26, "tile": [88, 20] }
       ],
       "gift_preferences": { "cauliflower": -1, "potato": 2, "parsnip": 0, "fern": 2 },
       "marriageable": false
@@ -198,7 +198,7 @@
       "personality": "earnest",
       "schedule": [
         { "start_hour": 6, "end_hour": 12, "tile": [12, 8] },
-        { "start_hour": 12, "end_hour": 18, "tile": [48, 22] },
+        { "start_hour": 12, "end_hour": 18, "tile": [30, 29] },
         { "start_hour": 18, "end_hour": 26, "tile": [40, 20] }
       ],
       "gift_preferences": { "potato": 2, "cauliflower": 1, "parsnip": 1, "iron": 2 },
@@ -257,9 +257,9 @@
       "name": "Dash",
       "personality": "reckless",
       "schedule": [
-        { "start_hour": 7, "end_hour": 12, "tile": [50, 23] },
-        { "start_hour": 12, "end_hour": 18, "tile": [62, 23] },
-        { "start_hour": 18, "end_hour": 26, "tile": [48, 22] }
+        { "start_hour": 7, "end_hour": 12, "tile": [96, 50] },
+        { "start_hour": 12, "end_hour": 18, "tile": [75, 34] },
+        { "start_hour": 18, "end_hour": 26, "tile": [104, 6] }
       ],
       "gift_preferences": { "potato": 2, "cauliflower": -1, "parsnip": 1, "gold": 2 },
       "marriageable": false
@@ -293,9 +293,9 @@
       "name": "Hank",
       "personality": "taciturn",
       "schedule": [
-        { "start_hour": 6, "end_hour": 12, "tile": [52, 23] },
-        { "start_hour": 12, "end_hour": 18, "tile": [63, 25] },
-        { "start_hour": 18, "end_hour": 26, "tile": [48, 25] }
+        { "start_hour": 6, "end_hour": 12, "tile": [20, 29] },
+        { "start_hour": 12, "end_hour": 18, "tile": [75, 41] },
+        { "start_hour": 18, "end_hour": 26, "tile": [46, 50] }
       ],
       "gift_preferences": { "parsnip": 1, "potato": 0, "cauliflower": 0, "iron": 2 },
       "marriageable": false
@@ -366,7 +366,7 @@
       "personality": "industrious",
       "schedule": [
         { "start_hour": 6, "end_hour": 12, "tile": [19, 5] },
-        { "start_hour": 12, "end_hour": 18, "tile": [48, 22] },
+        { "start_hour": 12, "end_hour": 18, "tile": [10, 29] },
         { "start_hour": 18, "end_hour": 26, "tile": [85, 13] }
       ],
       "gift_preferences": { "potato": 1, "parsnip": 1, "cauliflower": 2, "trout": 2 },
@@ -413,9 +413,9 @@
       "name": "Zed",
       "personality": "nostalgic",
       "schedule": [
-        { "start_hour": 7, "end_hour": 12, "tile": [51, 24] },
-        { "start_hour": 12, "end_hour": 19, "tile": [48, 25] },
-        { "start_hour": 19, "end_hour": 26, "tile": [48, 20] }
+        { "start_hour": 7, "end_hour": 12, "tile": [28, 44] },
+        { "start_hour": 12, "end_hour": 19, "tile": [60, 50] },
+        { "start_hour": 19, "end_hour": 26, "tile": [92, 20] }
       ],
       "gift_preferences": { "potato": 0, "parsnip": 1, "cauliflower": 2, "copper": 2 },
       "marriageable": false
@@ -497,9 +497,9 @@
       "name": "Val",
       "personality": "eager",
       "schedule": [
-        { "start_hour": 6, "end_hour": 12, "tile": [48, 22] },
-        { "start_hour": 12, "end_hour": 18, "tile": [53, 24] },
-        { "start_hour": 18, "end_hour": 26, "tile": [55, 22] }
+        { "start_hour": 6, "end_hour": 12, "tile": [80, 6] },
+        { "start_hour": 12, "end_hour": 18, "tile": [16, 32] },
+        { "start_hour": 18, "end_hour": 26, "tile": [110, 20] }
       ],
       "gift_preferences": { "cauliflower": 0, "potato": 2, "parsnip": 1, "salmon": 2 },
       "marriageable": false

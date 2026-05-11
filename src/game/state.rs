@@ -61,6 +61,8 @@ pub enum GamePhase {
     FestivalResults,   // showing festival results
     HorseDestination,  // picking a destination for the horse
     IceCreamShopOpen,  // ordering ice cream (summer only)
+    TeaMenu,           // ordering tea at the pavilion
+    WizardShop,        // buying magic buffs from the wizard
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -138,6 +140,7 @@ pub enum BuildingKind {
     Arcade,
     Restaurant,
     IceCreamShop,
+    WizardHut,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -256,6 +259,7 @@ pub struct Outfit {
 }
 
 pub const OUTFITS: &[Outfit] = &[
+    // Unisex outfits
     Outfit { name: "Farmer",      shirt: (230,235,255), pants: (56,82,158),  shoes: (56,36,20),  hat: (38,140,64),   price: 0 },
     Outfit { name: "Rancher",     shirt: (200,160,120), pants: (100,70,40),  shoes: (60,30,10),   hat: (139,90,43),   price: 500 },
     Outfit { name: "Fisherman",   shirt: (255,220,100), pants: (60,90,130),  shoes: (40,40,40),   hat: (40,100,160),  price: 800 },
@@ -264,6 +268,17 @@ pub const OUTFITS: &[Outfit] = &[
     Outfit { name: "Chef",        shirt: (255,255,255), pants: (30,30,30),   shoes: (20,20,20),   hat: (255,255,255), price: 1500 },
     Outfit { name: "Pirate",      shirt: (60,60,60),    pants: (100,80,50),  shoes: (40,30,20),   hat: (30,30,30),    price: 3000 },
     Outfit { name: "Knight",      shirt: (180,180,190), pants: (140,140,150),shoes: (100,100,110), hat: (160,160,170), price: 5000 },
+    // Riding outfit (auto-equipped when mounting horse, not buyable)
+    Outfit { name: "Equestrian",  shirt: (255,250,240), pants: (180,140,100), shoes: (60,30,10),   hat: (30,30,30),    price: 0 },
+    // Women's outfits
+    Outfit { name: "Sundress",    shirt: (255,200,200), pants: (255,200,200),shoes: (240,220,180), hat: (255,180,180), price: 600 },
+    Outfit { name: "Gardener",    shirt: (180,230,180), pants: (100,140,90), shoes: (139,90,43),   hat: (220,200,160), price: 700 },
+    Outfit { name: "Witch",       shirt: (50,20,80),    pants: (30,10,50),   shoes: (20,20,20),    hat: (40,15,60),    price: 2500 },
+    Outfit { name: "Dancer",      shirt: (255,100,100), pants: (200,60,60),  shoes: (180,140,40),  hat: (255,80,80),   price: 1800 },
+    Outfit { name: "Sailor",      shirt: (255,255,255), pants: (30,60,120),  shoes: (255,255,255), hat: (30,60,120),   price: 1200 },
+    Outfit { name: "Fairy",       shirt: (200,180,255), pants: (170,150,230),shoes: (180,255,180), hat: (220,200,255), price: 4000 },
+    Outfit { name: "Cowgirl",     shirt: (220,180,140), pants: (160,100,60), shoes: (100,60,30),   hat: (180,130,70),  price: 900 },
+    Outfit { name: "Empress",     shirt: (200,40,60),   pants: (160,20,40),  shoes: (40,40,40),    hat: (220,180,40),  price: 8000 },
 ];
 
 pub const HAIR_COLORS: &[(u8, u8, u8, &str)] = &[
@@ -378,6 +393,7 @@ pub fn building_at(col: usize, row: usize) -> Option<BuildingKind> {
     if col >= 49 && col <= 55 && row >= 21 && row <= 25 { return Some(BuildingKind::Arcade); }
     if col >= 41 && col <= 47 && row >= 21 && row <= 23 { return Some(BuildingKind::Restaurant); }
     if col >= 65 && col <= 69 && row >= 21 && row <= 23 { return Some(BuildingKind::IceCreamShop); }
+    if col >= 230 && col <= 234 && row >= 133 && row <= 136 { return Some(BuildingKind::WizardHut); }
     None
 }
 
@@ -409,6 +425,8 @@ pub fn door_at(col: usize, row: usize) -> Option<BuildingKind> {
     if row == 21 && col >= 41 && col <= 47 { return Some(BuildingKind::Restaurant); }
     // Ice Cream Shop north edge: row 21, cols 65-69
     if row == 21 && col >= 65 && col <= 69 { return Some(BuildingKind::IceCreamShop); }
+    // Wizard Hut north edge: row 133, cols 230-234
+    if row == 133 && col >= 230 && col <= 234 { return Some(BuildingKind::WizardHut); }
     None
 }
 
@@ -528,6 +546,16 @@ pub struct GameState {
     /// Restaurant menu cursor.
     pub restaurant_cursor: usize,
     pub icecream_cursor: usize,
+    pub tea_cursor: usize,
+    pub wizard_cursor: usize,
+    /// Days remaining for Growth Boost (crops grow 2x faster).
+    pub buff_growth: u8,
+    /// Days remaining for Charm Aura (+2 friendship per interaction).
+    pub buff_charm: u8,
+    /// Days remaining for Lucky Harvest (double crop yield).
+    pub buff_lucky: u8,
+    /// Days remaining for Endurance (half energy costs).
+    pub buff_endurance: u8,
     /// Arcade mini-game state: 0=waiting, 1=ready(green), 2=done
     pub arcade_phase: u8,
     /// Timer for the arcade game
@@ -564,10 +592,18 @@ pub struct GameState {
     pub horse_path: Vec<(usize, usize)>,
     /// How many consecutive steps the horse has been blocked by an NPC.
     pub horse_blocked_count: u8,
+    /// Chop progress on the tree the player is facing. (col, row, hits).
+    pub chop_progress: Option<(usize, usize, u8)>,
     /// Cursor for the destination picker menu.
     pub horse_dest_cursor: usize,
     /// Whether the player has purchased the equestrian center.
     pub has_equestrian_center: bool,
+    /// Whether the player has purchased the greenhouse (all seeds available year-round).
+    pub has_greenhouse: bool,
+    /// Whether the player has built the pavilion on the farm.
+    pub has_pavilion: bool,
+    /// Outfit the player was wearing before mounting the horse (restored on dismount).
+    pub pre_ride_outfit: Option<u8>,
     /// Jump positions in the riding arena: (col_offset, row_offset, orientation).
     /// Orientation: 0=horizontal, 1=vertical, 2=diagonal-right, 3=diagonal-left.
     pub arena_jumps: Vec<(u8, u8, u8)>,
@@ -677,6 +713,12 @@ impl GameState {
             rain_days: generate_rain_days(&crate::game::time::Season::Spring, 1),
             restaurant_cursor: 0,
             icecream_cursor: 0,
+            tea_cursor: 0,
+            wizard_cursor: 0,
+            buff_growth: 0,
+            buff_charm: 0,
+            buff_lucky: 0,
+            buff_endurance: 0,
             arcade_phase: 0,
             arcade_timer: 0.0,
             arcade_delay: 0.0,
@@ -700,8 +742,12 @@ impl GameState {
             horse_target: None,
             horse_path: Vec::new(),
             horse_blocked_count: 0,
+            chop_progress: None,
             horse_dest_cursor: 0,
             has_equestrian_center: false,
+            has_greenhouse: false,
+            has_pavilion: false,
+            pre_ride_outfit: None,
             arena_jumps: vec![(2, 1, 0), (5, 2, 1)], // default: one horizontal, one vertical
             arena_cursor: (0, 0),
             horse_leap_timer: 0.0,
@@ -749,12 +795,32 @@ impl GameState {
     }
 
     pub fn tick_time(&mut self) {
-        if self.phase != GamePhase::Playing {
+        if self.phase != GamePhase::Playing && self.phase != GamePhase::FarmhouseInterior {
             return;
         }
         let event = self.clock.tick();
         if event == TimeEvent::ForcedSleep {
+            // Dismount horse if riding
+            if self.riding_horse {
+                self.riding_horse = false;
+                if let Some(prev) = self.pre_ride_outfit.take() {
+                    self.player.outfit = prev;
+                }
+            }
+            self.horse_target = None;
+            self.horse_path.clear();
+
+            self.notify("You passed out and woke up in bed...");
             self.advance_day();
+            // Teleport to farmhouse interior
+            self.current_building = BuildingKind::Farmhouse;
+            self.phase = GamePhase::FarmhouseInterior;
+            self.farmhouse_tile = (8, 3);
+            self.player.facing = crate::game::player::Direction::Left;
+            self.player.tile = (2, 4);
+            if self.coop_active {
+                self.player2.tile = (3, 4);
+            }
         }
     }
 
@@ -841,10 +907,13 @@ impl GameState {
             pending_gold: self.pending_gold,
             ships_today: self.ships_today,
             married_npc_id: self.married_npc_id,
+            married_npc_id_p2: self.married_npc_id_p2,
             house_upgraded: self.house_upgraded,
             owned_furniture: self.owned_furniture.iter().map(|f| f.name().to_string()).collect(),
             owned_animals: self.owned_animals.iter().map(|a| a.name().to_string()).collect(),
             has_equestrian_center: self.has_equestrian_center,
+            has_greenhouse: self.has_greenhouse,
+            has_pavilion: self.has_pavilion,
             arena_jumps: self.arena_jumps.clone(),
             outfit: self.player.outfit,
             gender: self.player.gender,
@@ -887,6 +956,7 @@ impl GameState {
         self.pending_gold    = data.pending_gold;
         self.ships_today     = data.ships_today;
         self.married_npc_id  = data.married_npc_id;
+        self.married_npc_id_p2 = data.married_npc_id_p2;
         // Restore house upgrade
         self.house_upgraded = data.house_upgraded;
         if self.house_upgraded {
@@ -907,6 +977,16 @@ impl GameState {
 
         // Restore equestrian center
         self.has_equestrian_center = data.has_equestrian_center;
+        self.has_greenhouse = data.has_greenhouse;
+        self.has_pavilion = data.has_pavilion;
+        if self.has_pavilion {
+            // Place pavilion benches on the map (clear any obstacles)
+            for row in 9..12 {
+                for col in 28..32 {
+                    self.map.tiles[row][col].kind = crate::game::world::TileKind::Bench;
+                }
+            }
+        }
         if !data.arena_jumps.is_empty() {
             self.arena_jumps = data.arena_jumps.clone();
         }
@@ -1055,6 +1135,12 @@ impl GameState {
             }
         }
 
+        // Tick down wizard buffs
+        if self.buff_growth > 0 { self.buff_growth -= 1; }
+        if self.buff_charm > 0 { self.buff_charm -= 1; }
+        if self.buff_lucky > 0 { self.buff_lucky -= 1; }
+        if self.buff_endurance > 0 { self.buff_endurance -= 1; }
+
         // Regrow long grass at the start of Spring (day 1 after Winter ends)
         if self.clock.season == crate::game::time::Season::Spring && self.clock.day == 1 {
             let year_seed = self.clock.year as usize * 997;
@@ -1070,9 +1156,9 @@ impl GameState {
                     }
                 }
             }
-            // South wilderness too
-            for row in 30..50 {
-                for col in 1..75 {
+            // South wilderness + expanded areas
+            for row in 30..self.map.height.saturating_sub(1) {
+                for col in 1..self.map.width.saturating_sub(1) {
                     if self.map.tiles[row][col].kind == crate::game::world::TileKind::Grass
                         && self.map.tiles[row][col].crop.is_none()
                     {
@@ -1481,6 +1567,7 @@ impl GameState {
         sell_prices.push((ItemKind::Egg, 50));
         sell_prices.push((ItemKind::Milk, 75));
         sell_prices.push((ItemKind::Fiber, 5));
+        sell_prices.push((ItemKind::Wood, 10));
 
         for (item, price) in sell_prices {
             let qty = self.player.inventory.count(&item);
@@ -1906,15 +1993,54 @@ impl GameState {
         }
     }
 
-    /// Try to scythe the facing tile (or the tile the player stands on).
+    /// Try to scythe long grass or chop a tree the player is facing.
     pub fn try_scythe(&mut self) -> Result<(), ActionError> {
+        let facing = self.player.facing_tile();
+        let standing = self.player.tile;
+
+        // Check if facing a tree — chop it
+        let facing_tree = self.map.get(facing.0, facing.1)
+            .map(|t| matches!(t.kind, crate::game::world::TileKind::OakTree | crate::game::world::TileKind::OakTreeEmpty))
+            .unwrap_or(false);
+
+        if facing_tree {
+            let cost = 4i16;
+            if !self.player.spend_energy(cost) {
+                return Err(ActionError::NotEnoughEnergy);
+            }
+            let hits_needed = 3u8;
+            let (chop_col, chop_row, mut hits) = self.chop_progress
+                .filter(|&(c, r, _)| c == facing.0 && r == facing.1)
+                .unwrap_or((facing.0, facing.1, 0));
+            hits += 1;
+            if hits >= hits_needed {
+                // Tree falls!
+                self.map.tiles[facing.1][facing.0].kind = crate::game::world::TileKind::Grass;
+                self.chop_progress = None;
+                // Drop 2-5 wood
+                let seed = (facing.0.wrapping_mul(13).wrapping_add(facing.1.wrapping_mul(7))
+                    .wrapping_add(self.clock.day as usize)) % 4 + 2;
+                self.player.inventory.add(crate::game::inventory::ItemKind::Wood, seed as u32);
+                // Sometimes drop an acorn too
+                if self.clock.season == crate::game::time::Season::Fall {
+                    self.player.inventory.add(
+                        crate::game::inventory::ItemKind::Forage(crate::game::inventory::ForageKind::Acorn), 1);
+                    self.notify(&format!("Timber! +{} wood, +1 acorn", seed));
+                } else {
+                    self.notify(&format!("Timber! +{} wood", seed));
+                }
+            } else {
+                self.chop_progress = Some((chop_col, chop_row, hits));
+                self.notify(&format!("Chop! ({}/{})", hits, hits_needed));
+            }
+            return Ok(());
+        }
+
+        // Otherwise try to scythe long grass
         let cost = 2i16;
         if !self.player.spend_energy(cost) {
             return Err(ActionError::NotEnoughEnergy);
         }
-        let facing = self.player.facing_tile();
-        let standing = self.player.tile;
-        // Check facing tile first, then standing tile
         let target = if self.map.get(facing.0, facing.1)
             .map(|t| t.kind == crate::game::world::TileKind::LongGrass)
             .unwrap_or(false)
@@ -1926,12 +2052,10 @@ impl GameState {
         {
             standing
         } else {
-            // Refund energy if no long grass found
             self.player.energy = (self.player.energy + cost).min(self.player.max_energy);
             return Err(ActionError::InvalidTile);
         };
         self.map.tiles[target.1][target.0].kind = crate::game::world::TileKind::Grass;
-        // 1-3 fiber per cut
         let seed = (target.0.wrapping_mul(13).wrapping_add(target.1.wrapping_mul(7))
             .wrapping_add(self.clock.day as usize)) % 3 + 1;
         self.player.inventory.add(crate::game::inventory::ItemKind::Fiber, seed as u32);
@@ -1962,7 +2086,8 @@ impl GameState {
             ("East Meadow",  103, 6),
             ("East Pond",    103, 14),
             ("Horse Stable", 12,  17),
-            ("Beach",        96,  58),
+            ("Beach",        120, 124),
+            ("Wizard",       232, 132),
         ]
     }
 
@@ -2019,6 +2144,9 @@ impl GameState {
         if !self.riding_horse {
             if self.owned_animals.contains(&crate::game::state::AnimalKind::Horse) {
                 self.riding_horse = true;
+                const EQUESTRIAN_IDX: u8 = 8;
+                self.pre_ride_outfit = Some(self.player.outfit);
+                self.player.outfit = EQUESTRIAN_IDX;
             } else {
                 self.notify("You don't own a horse!");
                 return false;
@@ -2270,6 +2398,10 @@ impl GameState {
             self.riding_horse = false;
             self.horse_target = None;
             self.horse_path.clear();
+            // Restore previous outfit
+            if let Some(prev) = self.pre_ride_outfit.take() {
+                self.player.outfit = prev;
+            }
             self.notify("You dismounted.");
             return;
         }
@@ -2283,6 +2415,10 @@ impl GameState {
         let dy = (py as i32 - horse_tile.1 as i32).abs();
         if dx <= 2 && dy <= 2 {
             self.riding_horse = true;
+            // Swap to riding outfit
+            const EQUESTRIAN_IDX: u8 = 8;
+            self.pre_ride_outfit = Some(self.player.outfit);
+            self.player.outfit = EQUESTRIAN_IDX;
             self.notify("Giddyup!");
         } else {
             self.notify("Get closer to your horse!");
@@ -2294,11 +2430,18 @@ impl GameState {
         if self.rainbow_day { price / 2 } else { price }
     }
 
-    /// Move cursor in outfit shop.
+    /// Index of the Equestrian outfit (auto-equipped, hidden from wardrobe).
+    pub const EQUESTRIAN_IDX: usize = 8;
+
+    /// Move cursor in outfit shop, skipping the Equestrian outfit.
     pub fn outfit_move_cursor(&mut self, delta: i32) {
         let total = OUTFITS.len();
-        let new = self.outfit_cursor as i32 + delta;
-        self.outfit_cursor = new.rem_euclid(total as i32) as usize;
+        let mut new = (self.outfit_cursor as i32 + delta).rem_euclid(total as i32) as usize;
+        // Skip the Equestrian outfit
+        if new == Self::EQUESTRIAN_IDX {
+            new = (new as i32 + delta.signum()).rem_euclid(total as i32) as usize;
+        }
+        self.outfit_cursor = new;
     }
 
     /// Buy or equip the selected outfit.
@@ -2530,6 +2673,117 @@ impl GameState {
         self.phase = GamePhase::Playing;
     }
 
+    // ── Tea Menu (Pavilion) ──────────────────────────────────────────
+    pub const TEA_MENU: &'static [(&'static str, u32, i16)] = &[
+        ("Green Tea",       5,  15),
+        ("Chamomile",       8,  20),
+        ("Earl Grey",      10,  25),
+        ("Jasmine Tea",    12,  30),
+        ("Matcha Latte",   15,  35),
+        ("Oolong",         10,  25),
+        ("Honey Lemon",    12,  30),
+        ("Rose Petal Tea", 18,  40),
+    ];
+
+    pub fn open_tea(&mut self) {
+        if !self.has_pavilion {
+            self.notify("No pavilion built!");
+            return;
+        }
+        self.tea_cursor = 0;
+        self.phase = GamePhase::TeaMenu;
+    }
+
+    pub fn tea_move_cursor(&mut self, delta: i32) {
+        let total = Self::TEA_MENU.len();
+        let new = self.tea_cursor as i32 + delta;
+        self.tea_cursor = new.rem_euclid(total as i32) as usize;
+    }
+
+    pub fn tea_order(&mut self) {
+        let (name, price, energy) = Self::TEA_MENU[self.tea_cursor];
+        let eff_price = self.effective_price(price);
+        if self.player.gold < eff_price {
+            self.notify("Not enough gold!");
+            return;
+        }
+        self.player.gold -= eff_price;
+        self.player.energy = (self.player.energy + energy).min(self.player.max_energy);
+        self.notify(&format!("Lovely cup of {}! +{} energy", name, energy));
+        crate::game::save::play_sound("buy");
+    }
+
+    pub fn tea_close(&mut self) {
+        self.phase = GamePhase::Playing;
+    }
+
+    // ── Wizard Shop ──────────────────────────────────────────────────
+    // Each spell costs specific items and lasts 7 days.
+    // (name, description, item_name, item_qty, buff_type)
+    pub const WIZARD_SPELLS: &'static [(&'static str, &'static str, &'static str, u32, u8)] = &[
+        // buff_type: 0=growth, 1=charm, 2=lucky, 3=endurance
+        ("Growth Boost",   "Crops grow 2x faster for 7 days",     "wood",  20, 0),
+        ("Charm Aura",     "+2 friendship per interaction for 7 days", "fiber", 30, 1),
+        ("Lucky Harvest",  "Double crop yields for 7 days",       "wood",  30, 2),
+        ("Endurance",      "Half energy costs for 7 days",        "fiber", 20, 3),
+    ];
+
+    pub fn open_wizard(&mut self) {
+        self.wizard_cursor = 0;
+        self.phase = GamePhase::WizardShop;
+    }
+
+    pub fn wizard_move_cursor(&mut self, delta: i32) {
+        let total = Self::WIZARD_SPELLS.len();
+        let new = self.wizard_cursor as i32 + delta;
+        self.wizard_cursor = new.rem_euclid(total as i32) as usize;
+    }
+
+    pub fn wizard_buy(&mut self) {
+        let (name, _, item_key, qty, buff_type) = Self::WIZARD_SPELLS[self.wizard_cursor];
+
+        // Check if already active
+        let current = match buff_type {
+            0 => self.buff_growth,
+            1 => self.buff_charm,
+            2 => self.buff_lucky,
+            3 => self.buff_endurance,
+            _ => 0,
+        };
+        if current > 0 {
+            self.notify(&format!("{} is already active! ({} days left)", name, current));
+            return;
+        }
+
+        // Check item cost
+        let item = match item_key {
+            "wood" => crate::game::inventory::ItemKind::Wood,
+            "fiber" => crate::game::inventory::ItemKind::Fiber,
+            _ => return,
+        };
+        let have = self.player.inventory.count(&item);
+        if have < qty {
+            self.notify(&format!("Need {} {} (have {})", qty, item_key, have));
+            return;
+        }
+
+        // Pay and apply
+        self.player.inventory.remove(&item, qty);
+        match buff_type {
+            0 => self.buff_growth = 7,
+            1 => self.buff_charm = 7,
+            2 => self.buff_lucky = 7,
+            3 => self.buff_endurance = 7,
+            _ => {}
+        }
+        self.notify(&format!("The wizard casts {}! 7 days of magic.", name));
+        crate::game::save::play_sound("buy");
+    }
+
+    pub fn wizard_close(&mut self) {
+        self.phase = GamePhase::Playing;
+    }
+
     /// Start the arcade reaction game.
     pub fn start_arcade(&mut self) {
         self.arcade_phase = 0; // waiting
@@ -2694,6 +2948,11 @@ impl GameState {
 
         if let Some(standing) = self.map.get(pcol, prow) {
             if standing.kind == crate::game::world::TileKind::Bench {
+                // Pavilion bench — serve tea
+                if self.has_pavilion && pcol >= 28 && pcol <= 31 && prow >= 9 && prow <= 11 {
+                    self.open_tea();
+                    return;
+                }
                 let restore = 20i16;
                 self.player.energy = (self.player.energy + restore).min(self.player.max_energy);
                 self.notify("You sit and rest for a moment...");
@@ -2722,6 +2981,8 @@ impl GameState {
                         self.open_restaurant();
                     } else if kind == BuildingKind::IceCreamShop {
                         self.open_icecream();
+                    } else if kind == BuildingKind::WizardHut {
+                        self.open_wizard();
                     } else {
                         self.current_building = kind;
                         self.phase = GamePhase::FarmhouseInterior;
@@ -3079,6 +3340,7 @@ impl GameState {
             BuildingKind::Arcade => false,
             BuildingKind::Restaurant => false,
             BuildingKind::IceCreamShop => false,
+            BuildingKind::WizardHut => false,
         };
         if !blocked {
             self.farmhouse_tile = (nc, nr);
@@ -3092,11 +3354,13 @@ impl GameState {
         let season_str = current_season.name().to_lowercase();
         let hl = self.player.hoe_level;
         let cl = self.player.can_level;
+        let has_greenhouse = self.has_greenhouse;
         let mut names: Vec<&String> = self.shop.items.keys()
             .filter(|name| {
                 // Season-filter crops; always show non-crops
+                // If greenhouse is owned, show all crops regardless of season
                 match self.config.crops.get(*name) {
-                    Some(crop) => crop.season.name().to_lowercase() == season_str,
+                    Some(crop) => has_greenhouse || crop.season.name().to_lowercase() == season_str,
                     None => true,
                 }
             })
@@ -3110,6 +3374,8 @@ impl GameState {
                     "iron_can"   => cl == 1,
                     "gold_can"   => cl == 2,
                     "house_extension" => !self.house_upgraded,
+                    "greenhouse" => !self.has_greenhouse,
+                    "pavilion" => !self.has_pavilion,
                     _ => true,
                 }
             })
@@ -3140,6 +3406,44 @@ impl GameState {
             }
             self.player.gold -= price;
             self.player.inventory.add(ItemKind::Pendant, 1);
+            return Ok(());
+        }
+
+        // Pavilion.
+        if name == "pavilion" {
+            let price = self.effective_price(
+                self.shop.items.get("pavilion")
+                    .ok_or(crate::game::shop::ShopError::ItemNotAvailable)?
+                    .buy_price
+            );
+            if self.player.gold < price {
+                return Err(crate::game::shop::ShopError::NotEnoughGold);
+            }
+            self.player.gold -= price;
+            self.has_pavilion = true;
+            // Place bench tiles around the pavilion (cols 28-31, rows 9-11) — clear any obstacles
+            for row in 9..12 {
+                for col in 28..32 {
+                    self.map.tiles[row][col].kind = crate::game::world::TileKind::Bench;
+                }
+            }
+            self.notify("Pavilion built! Rest under the gazebo to restore energy.");
+            return Ok(());
+        }
+
+        // Greenhouse.
+        if name == "greenhouse" {
+            let price = self.effective_price(
+                self.shop.items.get("greenhouse")
+                    .ok_or(crate::game::shop::ShopError::ItemNotAvailable)?
+                    .buy_price
+            );
+            if self.player.gold < price {
+                return Err(crate::game::shop::ShopError::NotEnoughGold);
+            }
+            self.player.gold -= price;
+            self.has_greenhouse = true;
+            self.notify("Greenhouse built! All seeds are now available year-round.");
             return Ok(());
         }
 
@@ -3233,6 +3537,8 @@ impl GameState {
                         self.open_restaurant();
                     } else if kind == BuildingKind::IceCreamShop {
                         self.open_icecream();
+                    } else if kind == BuildingKind::WizardHut {
+                        self.open_wizard();
                     } else {
                         self.current_building = kind;
                         self.phase = GamePhase::FarmhouseInterior;
@@ -3405,6 +3711,7 @@ fn item_kind_to_name(item: &ItemKind) -> &'static str {
         ItemKind::Egg => "egg",
         ItemKind::Milk => "milk",
         ItemKind::Fiber => "fiber",
+        ItemKind::Wood => "wood",
     }
 }
 

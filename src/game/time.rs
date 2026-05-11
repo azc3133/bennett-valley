@@ -64,7 +64,7 @@ impl GameClock {
             self.minute = 0;
             self.hour += 1;
         }
-        if self.hour >= 26 {
+        if self.hour >= 24 {
             return TimeEvent::ForcedSleep;
         }
         TimeEvent::Normal
