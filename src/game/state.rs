@@ -575,6 +575,9 @@ pub struct GameState {
     /// Whether P2's relationships overlay is showing.
     pub show_relationships_p2: bool,
     /// Multiplayer role: "none", "host", or "guest".
+    pub player3: crate::game::player::Player,
+    pub player4: crate::game::player::Player,
+    pub mp_slot: u32,
     pub mp_role: String,
     /// Room code for multiplayer.
     pub mp_room: String,
@@ -586,6 +589,8 @@ pub struct GameState {
     pub riding_horse_p2: bool,
     /// Whether the player is currently riding the horse.
     pub riding_horse: bool,
+    /// Set to true each frame when the player is actively walking (for walk animation).
+    pub player_moving: bool,
     /// Horse autopilot destination (col, row). None = manual control.
     pub horse_target: Option<(usize, usize)>,
     /// Pre-computed A* path for horse autopilot. Each entry is the next tile to move to.
@@ -737,8 +742,22 @@ impl GameState {
                 p2.outfit = 1;
                 p2
             },
+            player3: {
+                let mut p3 = crate::game::player::Player::new(start_energy, 0);
+                p3.tile = (14, 10);
+                p3.outfit = 2;
+                p3
+            },
+            player4: {
+                let mut p4 = crate::game::player::Player::new(start_energy, 0);
+                p4.tile = (15, 10);
+                p4.outfit = 3;
+                p4
+            },
+            mp_slot: 1,
             riding_horse_p2: false,
             riding_horse: false,
+            player_moving: false,
             horse_target: None,
             horse_path: Vec::new(),
             horse_blocked_count: 0,
@@ -2489,7 +2508,11 @@ impl GameState {
             self.coop_active = true;
             self.player2.tile = (self.player.tile.0 + 1, self.player.tile.1);
             self.player2.energy = self.player.max_energy;
-            self.notify(&format!("Hosting! Code: {}", code));
+            self.player3.tile = (self.player.tile.0 + 2, self.player.tile.1);
+            self.player3.energy = self.player.max_energy;
+            self.player4.tile = (self.player.tile.0 + 3, self.player.tile.1);
+            self.player4.energy = self.player.max_energy;
+            self.notify(&format!("Hosting! Code: {} (up to 4 players)", code));
         } else {
             self.notify("Failed to create room.");
         }
@@ -2498,9 +2521,12 @@ impl GameState {
     /// Join a multiplayer room as guest.
     pub fn mp_join(&mut self, code: &str) {
         let result = crate::game::save::mp_join_room(code);
-        if result == "ok" {
+        if result.starts_with("ok") {
             self.mp_role = "guest".to_string();
             self.mp_room = code.to_uppercase();
+            self.mp_slot = result.split(':').nth(1)
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(2);
             self.coop_active = true;
             self.notify(&format!("Joined room {}!", code.to_uppercase()));
         } else {
@@ -2516,6 +2542,13 @@ impl GameState {
     }
 
     /// Host: send state snapshot to server. Guest: apply received state.
+    fn facing_num(d: &Direction) -> u8 {
+        match d { Direction::Up=>0, Direction::Down=>1, Direction::Left=>2, Direction::Right=>3 }
+    }
+    fn num_to_facing(n: u64) -> Direction {
+        match n { 0=>Direction::Up, 1=>Direction::Down, 2=>Direction::Left, _=>Direction::Right }
+    }
+
     pub fn mp_tick(&mut self, dt: f32) {
         if self.mp_role == "none" { return; }
 
@@ -2523,49 +2556,76 @@ impl GameState {
             self.mp_sync_timer += dt;
             if self.mp_sync_timer >= 0.1 {
                 self.mp_sync_timer = 0.0;
-                // Build compact state snapshot
+                // Build compact state snapshot with all 4 players
                 let snap = format!(
-                    r#"{{"p1":[{},{}],"p1f":{},"p2":[{},{}],"p2f":{},"day":{},"hour":{},"min":{},"season":"{}","year":{}}}"#,
-                    self.player.tile.0, self.player.tile.1,
-                    match self.player.facing { Direction::Up=>0, Direction::Down=>1, Direction::Left=>2, Direction::Right=>3 },
-                    self.player2.tile.0, self.player2.tile.1,
-                    match self.player2.facing { Direction::Up=>0, Direction::Down=>1, Direction::Left=>2, Direction::Right=>3 },
+                    r#"{{"p1":[{},{}],"p1f":{},"p2":[{},{}],"p2f":{},"p3":[{},{}],"p3f":{},"p4":[{},{}],"p4f":{},"day":{},"hour":{},"min":{},"season":"{}","year":{}}}"#,
+                    self.player.tile.0, self.player.tile.1, Self::facing_num(&self.player.facing),
+                    self.player2.tile.0, self.player2.tile.1, Self::facing_num(&self.player2.facing),
+                    self.player3.tile.0, self.player3.tile.1, Self::facing_num(&self.player3.facing),
+                    self.player4.tile.0, self.player4.tile.1, Self::facing_num(&self.player4.facing),
                     self.clock.day, self.clock.hour, self.clock.minute,
                     self.clock.season.name(), self.clock.year,
                 );
                 crate::game::save::mp_sync_state(&snap);
 
-                // Read guest inputs
+                // Read guest inputs (now tagged with slot: "2:up", "3:left", etc.)
                 let inputs_json = crate::game::save::mp_read();
                 if inputs_json.len() > 2 {
-                    // Parse input array and apply guest movements
-                    // Simple: each input is a direction string
                     if let Ok(inputs) = serde_json::from_str::<Vec<String>>(&inputs_json) {
                         for input in inputs {
-                            match input.as_str() {
-                                "up"    => self.move_player2(Direction::Up),
-                                "down"  => self.move_player2(Direction::Down),
-                                "left"  => self.move_player2(Direction::Left),
-                                "right" => self.move_player2(Direction::Right),
-                                _ => {}
+                            // Parse "slot:direction" or bare "direction" (backward compat)
+                            let (slot, dir_str) = if let Some((s, d)) = input.split_once(':') {
+                                (s.parse::<u32>().unwrap_or(2), d)
+                            } else {
+                                (2, input.as_str())
+                            };
+                            let direction = match dir_str {
+                                "up"    => Some(Direction::Up),
+                                "down"  => Some(Direction::Down),
+                                "left"  => Some(Direction::Left),
+                                "right" => Some(Direction::Right),
+                                _ => None,
+                            };
+                            if let Some(d) = direction {
+                                match slot {
+                                    2 => self.move_player2(d),
+                                    3 => self.move_player3(d),
+                                    4 => self.move_player4(d),
+                                    _ => {}
+                                }
                             }
                         }
                     }
                 }
             }
         } else if self.mp_role == "guest" {
-            // Apply received state
+            // Apply received state — all 4 player positions
             let state_json = crate::game::save::mp_read();
             if state_json.len() > 2 && !state_json.contains("error") {
                 if let Ok(snap) = serde_json::from_str::<serde_json::Value>(&state_json) {
-                    if let (Some(p1), Some(p2)) = (snap.get("p1"), snap.get("p2")) {
-                        if let (Some(x), Some(y)) = (p1.get(0), p1.get(1)) {
-                            self.player.tile = (x.as_u64().unwrap_or(10) as usize, y.as_u64().unwrap_or(10) as usize);
-                        }
-                        if let (Some(x), Some(y)) = (p2.get(0), p2.get(1)) {
-                            self.player2.tile = (x.as_u64().unwrap_or(12) as usize, y.as_u64().unwrap_or(10) as usize);
-                        }
-                    }
+                    // Helper to read a player position from the snapshot
+                    let read_pos = |key: &str, default_x: u64, default_y: u64| -> (usize, usize) {
+                        snap.get(key)
+                            .and_then(|p| {
+                                let x = p.get(0)?.as_u64().unwrap_or(default_x);
+                                let y = p.get(1)?.as_u64().unwrap_or(default_y);
+                                Some((x as usize, y as usize))
+                            })
+                            .unwrap_or((default_x as usize, default_y as usize))
+                    };
+                    let read_facing = |key: &str| -> Direction {
+                        Self::num_to_facing(snap.get(key).and_then(|v| v.as_u64()).unwrap_or(1))
+                    };
+
+                    self.player.tile = read_pos("p1", 10, 10);
+                    self.player.facing = read_facing("p1f");
+                    self.player2.tile = read_pos("p2", 12, 10);
+                    self.player2.facing = read_facing("p2f");
+                    self.player3.tile = read_pos("p3", 14, 10);
+                    self.player3.facing = read_facing("p3f");
+                    self.player4.tile = read_pos("p4", 15, 10);
+                    self.player4.facing = read_facing("p4f");
+
                     if let Some(day) = snap.get("day").and_then(|v| v.as_u64()) {
                         self.clock.day = day as u8;
                     }
@@ -2580,10 +2640,10 @@ impl GameState {
         }
     }
 
-    /// Guest: send an input event to the host.
+    /// Guest: send an input event to the host, tagged with this guest's slot.
     pub fn mp_send_input(&self, input: &str) {
         if self.mp_role == "guest" {
-            crate::game::save::mp_send_input(&format!("\"{}\"", input));
+            crate::game::save::mp_send_input(&format!("\"{}:{}\"", self.mp_slot, input));
         }
     }
 
@@ -3669,6 +3729,44 @@ impl GameState {
                 self.player2.tile = new_tile;
                 crate::game::save::play_sound("step");
             }
+        }
+    }
+    /// Move player 3 (multiplayer). Simplified — movement only.
+    pub fn move_player3(&mut self, dir: Direction) {
+        if !self.coop_active || self.phase != GamePhase::Playing { return; }
+        let (col, row) = self.player3.tile;
+        let new_tile = match dir {
+            Direction::Up    => (col, row.saturating_sub(1)),
+            Direction::Down  => (col, (row + 1).min(self.map.height - 1)),
+            Direction::Left  => (col.saturating_sub(1), row),
+            Direction::Right => ((col + 1).min(self.map.width - 1), row),
+        };
+        self.player3.facing = dir;
+        if let Some(tile) = self.map.get(new_tile.0, new_tile.1) {
+            if !tile.kind.is_passable() { return; }
+            // Don't overlap other players
+            if new_tile == self.player.tile || new_tile == self.player2.tile || new_tile == self.player4.tile { return; }
+            if self.npcs.iter().any(|n| n.tile == new_tile) { return; }
+            self.player3.tile = new_tile;
+        }
+    }
+
+    /// Move player 4 (multiplayer). Simplified — movement only.
+    pub fn move_player4(&mut self, dir: Direction) {
+        if !self.coop_active || self.phase != GamePhase::Playing { return; }
+        let (col, row) = self.player4.tile;
+        let new_tile = match dir {
+            Direction::Up    => (col, row.saturating_sub(1)),
+            Direction::Down  => (col, (row + 1).min(self.map.height - 1)),
+            Direction::Left  => (col.saturating_sub(1), row),
+            Direction::Right => ((col + 1).min(self.map.width - 1), row),
+        };
+        self.player4.facing = dir;
+        if let Some(tile) = self.map.get(new_tile.0, new_tile.1) {
+            if !tile.kind.is_passable() { return; }
+            if new_tile == self.player.tile || new_tile == self.player2.tile || new_tile == self.player3.tile { return; }
+            if self.npcs.iter().any(|n| n.tile == new_tile) { return; }
+            self.player4.tile = new_tile;
         }
     }
 }

@@ -216,6 +216,7 @@ extern "C" {
     fn bv_mp_send_input(ptr: *const u8, len: usize);
     fn bv_mp_read(buf_ptr: *mut u8, buf_max: usize) -> usize;
     fn bv_mp_role(buf_ptr: *mut u8, buf_max: usize) -> usize;
+    fn bv_mp_slot() -> u32;
 }
 
 /// Create a multiplayer room (host). Returns room code or empty string.
@@ -284,6 +285,14 @@ pub fn toggle_music() -> u32 {
     { return unsafe { bv_toggle_music() }; }
     #[cfg(not(target_arch = "wasm32"))]
     0
+}
+
+/// Get this guest's player slot (1=host, 2/3/4=guest).
+pub fn mp_slot() -> u32 {
+    #[cfg(target_arch = "wasm32")]
+    { return unsafe { bv_mp_slot() }; }
+    #[cfg(not(target_arch = "wasm32"))]
+    1
 }
 
 /// Read and clear the pending ride command from JS. Returns empty string if none.

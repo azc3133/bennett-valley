@@ -563,7 +563,25 @@ async fn main() {
             }
         }
 
+        state.player_moving = move_dir.is_some() && state.phase == GamePhase::Playing;
+
         if let Some(d) = move_dir {
+            // Guest: WASD sends input to host instead of moving locally
+            if state.mp_role == "guest" && state.phase == GamePhase::Playing {
+                if move_cooldown <= 0.0 {
+                    let dir_str = match d {
+                        Direction::Up => "up", Direction::Down => "down",
+                        Direction::Left => "left", Direction::Right => "right",
+                    };
+                    state.mp_send_input(dir_str);
+                    move_cooldown = MOVE_REPEAT_INTERVAL;
+                } else {
+                    move_cooldown -= dt;
+                }
+            } else
+
+            // Host/local: normal movement
+            {
             // Manual movement cancels horse autopilot
             if state.horse_target.is_some() && state.phase == GamePhase::Playing {
                 state.horse_target = None;
@@ -597,6 +615,18 @@ async fn main() {
             } else {
                 move_cooldown -= dt;
             }
+            } // end host/local movement block
+        }
+
+        // Guest camera follows their own player
+        if state.mp_role == "guest" {
+            let my_tile = match state.mp_slot {
+                2 => state.player2.tile,
+                3 => state.player3.tile,
+                4 => state.player4.tile,
+                _ => state.player.tile,
+            };
+            camera.set_target(my_tile.0, my_tile.1, sw, sh);
         }
 
         // ── Horse destination: A/D for column switching ──────────────────────
@@ -1167,9 +1197,11 @@ async fn main() {
 
         // ── Render ────────────────────────────────────────────────────────────
         clear_background(Color::from_hex(0x2d5a27));
-        if state.coop_active {
+        if state.coop_active && state.mp_role == "none" {
+            // Local co-op: split screen
             renderer::draw_coop(&state, &camera, &camera2);
         } else {
+            // Solo, multiplayer host, or multiplayer guest: single full-screen view
             renderer::draw(&state, &camera);
         }
 

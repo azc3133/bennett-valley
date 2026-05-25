@@ -188,6 +188,7 @@
       // ── Multiplayer HTTP polling ─────────────────────────────────
       var bvMpRoom = null;
       var bvMpRole = null; // "host" or "guest"
+      var bvMpSlot = 1;    // player slot: 1=host, 2/3/4=guest
       var bvMpLatestState = "";
       var bvMpLatestInputs = "[]";
       var bvMpPollTimer = null;
@@ -230,8 +231,9 @@
             if (data.ok) {
               bvMpRoom = code.toUpperCase();
               bvMpRole = "guest";
+              bvMpSlot = data.slot || 2;
               bvMpStartPolling();
-              console.log("Joined room " + bvMpRoom + "! Use arrow keys to move.");
+              console.log("Joined room " + bvMpRoom + " as P" + bvMpSlot + "! Use WASD to move.");
             } else {
               console.log("Room not found: " + code);
             }
@@ -272,10 +274,11 @@
               xhr.open("POST", "/api/mp/join?room=" + code, false);
               xhr.send();
               var data = JSON.parse(xhr.responseText);
-              var result = data.ok ? "ok" : "fail";
+              var result = data.ok ? ("ok:" + (data.slot || 2)) : "fail";
               if (data.ok) {
                 bvMpRoom = code;
                 bvMpRole = "guest";
+                bvMpSlot = data.slot || 2;
                 bvMpStartPolling();
               }
               var bytes = new TextEncoder().encode(result);
@@ -320,6 +323,9 @@
               new Uint8Array(wasm_memory.buffer, buf_ptr, len).set(bytes.subarray(0, len));
               return len;
             } catch(e) { return 0; }
+          };
+          importObject.env.bv_mp_slot = function() {
+            return bvMpSlot;
           };
           importObject.env.bv_toggle_music = function() {
             return bvToggleMusic();

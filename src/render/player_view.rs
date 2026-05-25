@@ -3,12 +3,6 @@ use crate::game::player::{Direction, Player};
 use crate::render::camera::TILE_SIZE;
 
 const SKIN: Color  = Color { r: 0.96, g: 0.80, b: 0.62, a: 1.0 };
-const HAIR: Color  = Color { r: 0.32, g: 0.18, b: 0.08, a: 1.0 };
-const SHIRT: Color = Color { r: 0.90, g: 0.92, b: 1.00, a: 1.0 }; // light periwinkle
-const PANTS: Color = Color { r: 0.22, g: 0.32, b: 0.62, a: 1.0 }; // denim
-const SHOES: Color = Color { r: 0.22, g: 0.14, b: 0.08, a: 1.0 };
-
-const HAT: Color = Color { r: 0.15, g: 0.55, b: 0.25, a: 1.0 }; // green farmer hat
 
 /// Player is always drawn at the centre of the screen.
 pub fn draw(player: &Player) {
@@ -31,6 +25,14 @@ fn outfit_colors(player: &Player) -> (Color, Color, Color, Color) {
 }
 
 pub fn draw_player_with_leap(player: &Player, riding: bool, leap_offset: f32) {
+    draw_player_full(player, riding, leap_offset, false);
+}
+
+pub fn draw_player_moving(player: &Player, riding: bool, leap_offset: f32, moving: bool) {
+    draw_player_full(player, riding, leap_offset, moving);
+}
+
+fn draw_player_full(player: &Player, riding: bool, leap_offset: f32, moving: bool) {
     let sw = screen_width();
     let sh = screen_height();
     let x = sw / 2.0 - TILE_SIZE / 2.0;
@@ -57,7 +59,7 @@ pub fn draw_player_with_leap(player: &Player, riding: bool, leap_offset: f32) {
         if player.gender == 0 { draw_hat(x, py, hat); }
         draw_player_indicator(x, py);
     } else {
-        draw_character(x, y, shirt, pants, shoes, SKIN, hair, &player.facing);
+        draw_character_ex(x, y, shirt, pants, shoes, SKIN, hair, &player.facing, moving);
         if player.gender == 1 && player.hairstyle > 0 {
             draw_hairstyle(x, y, hair, player.hairstyle);
         }
@@ -216,15 +218,37 @@ pub fn draw_character(
     skin: Color, hair: Color,
     facing: &Direction,
 ) {
-    // Drop shadow
+    draw_character_ex(x, y, outfit, pants, shoes, skin, hair, facing, false);
+}
+
+/// Draw character with optional walking animation.
+pub fn draw_character_ex(
+    x: f32, y: f32,
+    outfit: Color, pants: Color, shoes: Color,
+    skin: Color, hair: Color,
+    facing: &Direction,
+    moving: bool,
+) {
+    let t = get_time() as f32;
+    // Walking animation — only when moving
+    let (bob, arm_swing, leg_alt) = if moving {
+        let walk_phase = (t * 8.0).sin();
+        (walk_phase.abs() * 1.5, walk_phase * 2.0, walk_phase * 1.5)
+    } else {
+        (0.0, 0.0, 0.0)
+    };
+
+    let y = y - bob; // apply bob
+
+    // Drop shadow (stays on ground, doesn't bob)
     draw_rectangle(
-        x + 6.0, y + 28.0, 20.0, 4.0,
+        x + 6.0, y + bob + 28.0, 20.0, 4.0,
         Color { r: 0.0, g: 0.0, b: 0.0, a: 0.15 },
     );
 
-    // Shoes
-    draw_rectangle(x + 6.0,  y + 24.0, 8.0, 5.0, shoes);
-    draw_rectangle(x + 18.0, y + 24.0, 8.0, 5.0, shoes);
+    // Shoes — alternate positions for walking
+    draw_rectangle(x + 6.0,  y + 24.0 + leg_alt, 8.0, 5.0, shoes);
+    draw_rectangle(x + 18.0, y + 24.0 - leg_alt, 8.0, 5.0, shoes);
 
     // Pants
     draw_rectangle(x + 7.0, y + 17.0, 18.0, 8.0, pants);
@@ -234,13 +258,16 @@ pub fn draw_character(
 
     // Shirt / body
     draw_rectangle(x + 5.0, y + 10.0, 22.0, 9.0, outfit);
+    // Shirt collar highlight
+    draw_rectangle(x + 12.0, y + 10.0, 8.0, 2.0,
+        Color { r: outfit.r + 0.1, g: outfit.g + 0.1, b: outfit.b + 0.1, a: 1.0 });
 
-    // Arms
-    draw_rectangle(x + 1.0,  y + 11.0, 5.0, 7.0, outfit);
-    draw_rectangle(x + 26.0, y + 11.0, 5.0, 7.0, outfit);
+    // Arms — swing when walking
+    draw_rectangle(x + 1.0,  y + 11.0 - arm_swing, 5.0, 7.0, outfit);
+    draw_rectangle(x + 26.0, y + 11.0 + arm_swing, 5.0, 7.0, outfit);
     // Hands
-    draw_circle(x + 3.5,  y + 19.0, 3.0, skin);
-    draw_circle(x + 28.5, y + 19.0, 3.0, skin);
+    draw_circle(x + 3.5,  y + 19.0 - arm_swing, 3.0, skin);
+    draw_circle(x + 28.5, y + 19.0 + arm_swing, 3.0, skin);
 
     // Neck
     draw_rectangle(x + 13.0, y + 8.0, 6.0, 4.0, skin);
@@ -258,11 +285,15 @@ pub fn draw_character(
             // Back of head — no face visible
         }
         Direction::Down | Direction::Left | Direction::Right => {
-            // Eyes
-            draw_rectangle(x + 11.0, y + 7.0, 3.0, 3.0, WHITE);
-            draw_rectangle(x + 18.0, y + 7.0, 3.0, 3.0, WHITE);
-            draw_rectangle(x + 12.0, y + 8.0, 2.0, 2.0, Color::from_hex(0x2a1800));
-            draw_rectangle(x + 19.0, y + 8.0, 2.0, 2.0, Color::from_hex(0x2a1800));
+            // Eyes — blink occasionally
+            let blink = ((t * 0.7).sin() > 0.97);
+            let eye_h = if blink { 1.0 } else { 3.0 };
+            draw_rectangle(x + 11.0, y + 7.0, 3.0, eye_h, WHITE);
+            draw_rectangle(x + 18.0, y + 7.0, 3.0, eye_h, WHITE);
+            if !blink {
+                draw_rectangle(x + 12.0, y + 8.0, 2.0, 2.0, Color::from_hex(0x2a1800));
+                draw_rectangle(x + 19.0, y + 8.0, 2.0, 2.0, Color::from_hex(0x2a1800));
+            }
             // Smile
             draw_line(x + 13.0, y + 12.0, x + 19.0, y + 12.0, 1.0, Color::from_hex(0x9b5020));
         }

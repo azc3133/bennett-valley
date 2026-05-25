@@ -189,6 +189,29 @@ fn draw_full(map: &FarmMap, camera: &Camera, house_upgraded: bool, hour: u8, rai
         }
     }
 
+    // Fireflies at night
+    if hour >= 20 {
+        let t = get_time() as f32;
+        let sw = screen_width();
+        let sh = screen_height();
+        for i in 0..20u32 {
+            let seed = i as f32;
+            // Each firefly has its own orbit
+            let fx = (sw * 0.1) + (seed * 47.3 + t * 0.3).sin() * sw * 0.4
+                   + (seed * 13.7 + t * 0.7).cos() * sw * 0.15;
+            let fy = (sh * 0.15) + (seed * 31.1 + t * 0.25).cos() * sh * 0.35
+                   + (seed * 7.3 + t * 0.5).sin() * sh * 0.2;
+            // Glow pulse
+            let pulse = ((t * 2.5 + seed * 1.7).sin() + 1.0) * 0.5;
+            if pulse > 0.3 {
+                // Outer glow
+                draw_circle(fx, fy, 4.0, Color { r: 0.9, g: 0.95, b: 0.3, a: pulse * 0.15 });
+                // Inner bright dot
+                draw_circle(fx, fy, 1.5, Color { r: 1.0, g: 1.0, b: 0.5, a: pulse * 0.8 });
+            }
+        }
+    }
+
     // Night overlay — darken the world after sunset
     if hour >= 19 {
         let darkness = match hour {
@@ -239,16 +262,25 @@ fn draw_grass(x: f32, y: f32, col: usize, row: usize) {
         }
         _ => {}
     }
+    // Small grass tufts (animated sway)
+    if h < 3 {
+        let t = get_time() as f32;
+        let sway = (t * 1.2 + col as f32 * 0.5 + row as f32 * 0.8).sin() * 1.5;
+        let gx = x + 14.0 + (h as f32 * 7.0);
+        let gy = y + TS - 2.0;
+        draw_line(gx, gy, gx + sway, gy - 5.0, 1.0, Color::from_hex(0x68a044));
+        draw_line(gx + 4.0, gy, gx + 4.0 + sway * 0.8, gy - 4.0, 1.0, Color::from_hex(0x5a9a3c));
+    }
 }
 
 fn draw_long_grass(x: f32, y: f32, col: usize, row: usize) {
+    let t = get_time() as f32;
     // Base — darker green than normal grass
     draw_rectangle(x, y, TS, TS, Color::from_hex(0x4a7a2c));
     // Tall grass blades
     let h = (col.wrapping_mul(7).wrapping_add(row.wrapping_mul(13))) % 5;
     let blade_color = Color::from_hex(0x3a6a1c);
     let tip_color = Color::from_hex(0x6aaa3c);
-    // Draw 4-6 grass blades with varying heights
     let blades: &[(f32, f32, f32)] = match h {
         0 => &[(3.0, 2.0, 14.0), (9.0, 4.0, 12.0), (16.0, 1.0, 15.0), (22.0, 3.0, 13.0), (12.0, 2.0, 11.0)],
         1 => &[(2.0, 3.0, 13.0), (7.0, 1.0, 15.0), (14.0, 2.0, 14.0), (20.0, 4.0, 11.0), (25.0, 2.0, 12.0)],
@@ -258,10 +290,12 @@ fn draw_long_grass(x: f32, y: f32, col: usize, row: usize) {
     };
     for &(bx, _by, bh) in blades {
         let base_y = y + TS - 2.0;
-        // Blade body
-        draw_rectangle(x + bx, base_y - bh, 2.0, bh, blade_color);
-        // Blade tip (lighter)
-        draw_rectangle(x + bx - 0.5, base_y - bh - 2.0, 3.0, 3.0, tip_color);
+        // Wind sway — each blade sways independently
+        let sway = (t * 2.0 + bx * 0.5 + col as f32 * 0.3 + row as f32 * 0.7).sin() * 3.0;
+        // Blade body (line from base, leaning with sway)
+        draw_line(x + bx + 1.0, base_y, x + bx + 1.0 + sway, base_y - bh, 2.0, blade_color);
+        // Blade tip (lighter, follows sway)
+        draw_circle(x + bx + sway + 0.5, base_y - bh - 1.0, 2.0, tip_color);
     }
 }
 
@@ -307,20 +341,34 @@ fn draw_path(x: f32, y: f32, col: usize, row: usize) {
 }
 
 fn draw_water(x: f32, y: f32, col: usize, row: usize) {
-    // Deep water base
-    draw_rectangle(x, y, TS, TS, Color::from_hex(0x1a6faa));
-    // Wave shimmer — alternates by position
-    let phase = (col + row) % 2;
-    let shimmer = Color::from_hex(0x4a9fdf);
-    if phase == 0 {
-        draw_rectangle(x + 3.0,  y + 8.0,  14.0, 2.0, shimmer);
-        draw_rectangle(x + 18.0, y + 18.0, 9.0,  2.0, shimmer);
-    } else {
-        draw_rectangle(x + 8.0,  y + 4.0,  9.0,  2.0, shimmer);
-        draw_rectangle(x + 2.0,  y + 20.0, 14.0, 2.0, shimmer);
+    let t = get_time() as f32;
+    // Deep water base — slight color variation
+    let depth = ((col + row) % 3) as f32 * 0.02;
+    draw_rectangle(x, y, TS, TS, Color::new(0.1 - depth, 0.43 + depth, 0.67, 1.0));
+
+    // Animated wave shimmer — shifts over time
+    let wave_offset = (t * 1.5 + col as f32 * 0.7 + row as f32 * 0.5).sin() * 6.0;
+    let wave2 = (t * 1.2 + col as f32 * 1.3 + row as f32 * 0.3).cos() * 4.0;
+    let shimmer = Color { r: 0.3, g: 0.62, b: 0.87, a: 0.5 };
+    let shimmer2 = Color { r: 0.4, g: 0.7, b: 0.95, a: 0.35 };
+
+    draw_rectangle(x + 3.0 + wave_offset, y + 8.0, 12.0, 2.0, shimmer);
+    draw_rectangle(x + 14.0 + wave2, y + 18.0, 10.0, 2.0, shimmer2);
+    // Third shimmer line
+    let wave3 = (t * 0.9 + col as f32 * 0.4 + row as f32 * 1.1).sin() * 5.0;
+    draw_rectangle(x + 8.0 + wave3, y + 26.0, 8.0, 1.5, shimmer);
+
+    // Sparkle — small bright dot that appears/disappears
+    let sparkle = ((t * 2.0 + col as f32 * 3.7 + row as f32 * 5.3).sin() + 0.7).max(0.0);
+    if sparkle > 0.0 {
+        let sx = x + ((col * 17 + row * 31) % 25) as f32 + 3.0;
+        let sy = y + ((col * 13 + row * 7) % 20) as f32 + 5.0;
+        draw_circle(sx, sy, 1.5, Color { r: 1.0, g: 1.0, b: 1.0, a: sparkle * 0.6 });
     }
-    // Foam edge — top of tile
-    draw_rectangle(x, y, TS, 2.0, Color { r: 0.7, g: 0.88, b: 1.0, a: 0.4 });
+
+    // Foam edge — top of tile, gently pulsing
+    let foam_alpha = 0.3 + (t * 1.8 + col as f32).sin().abs() * 0.2;
+    draw_rectangle(x, y, TS, 2.0, Color { r: 0.7, g: 0.88, b: 1.0, a: foam_alpha });
 }
 
 fn draw_ship_box(x: f32, y: f32) {
@@ -518,6 +566,10 @@ fn draw_rock(x: f32, y: f32, hp: u8) {
 fn draw_crop(crop: &CropState, x: f32, y: f32) {
     let (stem, produce) = crop_colors(&crop.kind);
     let days = crop.days_grown;
+    let t = get_time() as f32;
+
+    // Wind sway — gentle offset based on position and time
+    let sway = (t * 1.5 + x * 0.1 + y * 0.07).sin() * 2.0;
 
     // Watered tint on soil
     if crop.watered_today {
@@ -529,26 +581,27 @@ fn draw_crop(crop: &CropState, x: f32, y: f32) {
         // Seed — small mound
         draw_circle(x + 16.0, y + 22.0, 3.5, Color::from_hex(0x9b7040));
     } else if days == 1 {
-        // Sprout — tiny stem + two leaves
-        draw_line(x + 16.0, y + 24.0, x + 16.0, y + 16.0, 2.0, stem);
-        draw_circle(x + 12.0, y + 18.0, 4.0, stem);
-        draw_circle(x + 20.0, y + 17.0, 4.0, stem);
+        // Sprout — tiny stem + two leaves, slight sway
+        draw_line(x + 16.0, y + 24.0, x + 16.0 + sway * 0.3, y + 16.0, 2.0, stem);
+        draw_circle(x + 12.0 + sway * 0.3, y + 18.0, 4.0, stem);
+        draw_circle(x + 20.0 + sway * 0.3, y + 17.0, 4.0, stem);
     } else if days <= 3 {
-        // Growing — taller stem + bigger leaves
-        draw_line(x + 16.0, y + 26.0, x + 16.0, y + 10.0, 2.5, stem);
-        draw_circle(x + 10.0, y + 16.0, 5.0, stem);
-        draw_circle(x + 22.0, y + 14.0, 5.0, stem);
-        draw_circle(x + 14.0, y + 11.0, 4.0, stem);
+        // Growing — taller stem + bigger leaves, more sway
+        draw_line(x + 16.0, y + 26.0, x + 16.0 + sway * 0.5, y + 10.0, 2.5, stem);
+        draw_circle(x + 10.0 + sway * 0.5, y + 16.0, 5.0, stem);
+        draw_circle(x + 22.0 + sway * 0.5, y + 14.0, 5.0, stem);
+        draw_circle(x + 14.0 + sway * 0.4, y + 11.0, 4.0, stem);
     } else {
-        // Mature — full plant with produce color on top
-        draw_line(x + 16.0, y + 28.0, x + 16.0, y + 8.0, 3.0, stem);
-        draw_circle(x + 9.0,  y + 18.0, 6.0, stem);
-        draw_circle(x + 23.0, y + 16.0, 6.0, stem);
-        draw_circle(x + 14.0, y + 11.0, 5.0, stem);
-        // Produce
-        draw_circle(x + 16.0, y + 8.0, 6.0, produce);
-        // Shine on produce
-        draw_circle(x + 14.0, y + 6.0, 2.0, Color { r: 1.0, g: 1.0, b: 1.0, a: 0.4 });
+        // Mature — full plant with produce color on top, full sway
+        draw_line(x + 16.0, y + 28.0, x + 16.0 + sway, y + 8.0, 3.0, stem);
+        draw_circle(x + 9.0 + sway,  y + 18.0, 6.0, stem);
+        draw_circle(x + 23.0 + sway, y + 16.0, 6.0, stem);
+        draw_circle(x + 14.0 + sway * 0.8, y + 11.0, 5.0, stem);
+        // Produce — bobs with sway
+        draw_circle(x + 16.0 + sway, y + 8.0, 6.0, produce);
+        // Animated shine on produce
+        let shine_alpha = 0.3 + (t * 2.0 + x * 0.3).sin().abs() * 0.3;
+        draw_circle(x + 14.0 + sway, y + 6.0, 2.0, Color { r: 1.0, g: 1.0, b: 1.0, a: shine_alpha });
     }
 }
 

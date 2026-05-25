@@ -17,3 +17,5 @@ pub mod outfit_view;
 pub mod fishing_view;
 pub mod farmhouse_view;
 pub mod relationships_view;
+#[allow(unused, non_snake_case, dead_code)]
+pub mod sprites;

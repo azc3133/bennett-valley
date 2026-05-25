@@ -547,14 +547,19 @@ fn draw_world(state: &GameState, camera: &Camera, _is_right_half: bool) {
     draw_squirrels(&state.squirrels, camera);
 
     if state.coop_active {
-        // Co-op: draw both players at their world positions (camera follows midpoint)
+        // Co-op: draw all players at their world positions
         let (p1x, p1y) = camera.world_to_screen(state.player.tile.0, state.player.tile.1);
         draw_p1_at_world(state, p1x, p1y);
         let (p2x, p2y) = camera.world_to_screen(state.player2.tile.0, state.player2.tile.1);
         draw_p2_character(state, p2x, p2y);
+        // P3 and P4 (multiplayer)
+        let (p3x, p3y) = camera.world_to_screen(state.player3.tile.0, state.player3.tile.1);
+        draw_pn_character(&state.player3, p3x, p3y, Color::from_hex(0x2ecc71), "P3");
+        let (p4x, p4y) = camera.world_to_screen(state.player4.tile.0, state.player4.tile.1);
+        draw_pn_character(&state.player4, p4x, p4y, Color::from_hex(0xe74c3c), "P4");
     } else {
         // Solo: draw P1 at screen center (classic behavior)
-        player_view::draw_player_with_leap(&state.player, state.riding_horse, state.horse_leap_height);
+        player_view::draw_player_moving(&state.player, state.riding_horse, state.horse_leap_height, state.player_moving);
     }
 }
 
@@ -617,6 +622,31 @@ fn draw_p2_character(state: &GameState, x: f32, y: f32) {
         Vec2::new(ax + 4.0, ay - 2.0),
         Color::from_hex(0x3498db),
     );
+}
+
+/// Draw a generic player character (P3/P4) with a colored arrow indicator.
+fn draw_pn_character(player: &crate::game::player::Player, x: f32, y: f32, arrow_color: Color, _label: &str) {
+    use crate::game::state::OUTFITS;
+    let o = &OUTFITS[player.outfit.min(OUTFITS.len() as u8 - 1) as usize];
+    let shirt = Color::new(o.shirt.0 as f32/255.0, o.shirt.1 as f32/255.0, o.shirt.2 as f32/255.0, 1.0);
+    let pants = Color::new(o.pants.0 as f32/255.0, o.pants.1 as f32/255.0, o.pants.2 as f32/255.0, 1.0);
+    let shoes = Color::new(o.shoes.0 as f32/255.0, o.shoes.1 as f32/255.0, o.shoes.2 as f32/255.0, 1.0);
+    let hat_c = Color::new(o.hat.0 as f32/255.0, o.hat.1 as f32/255.0, o.hat.2 as f32/255.0, 1.0);
+    let skin = Color { r: 0.96, g: 0.80, b: 0.62, a: 1.0 };
+    let hair = player_view::player_hair_color(player);
+    player_view::draw_character(x, y, shirt, pants, shoes, skin, hair, &player.facing);
+    if player.gender == 1 && player.hairstyle > 0 {
+        player_view::draw_hairstyle(x, y, hair, player.hairstyle);
+    }
+    if player.gender == 0 {
+        draw_rectangle(x + 5.0, y - 2.0, 22.0, 4.0, hat_c);
+        draw_rectangle(x + 9.0, y - 9.0, 14.0, 8.0, hat_c);
+    }
+    // Colored indicator arrow
+    let ax = x + 16.0;
+    let ay = y - 16.0;
+    draw_line(ax, ay - 6.0, ax, ay, 2.0, arrow_color);
+    draw_triangle(Vec2::new(ax, ay + 3.0), Vec2::new(ax - 4.0, ay - 2.0), Vec2::new(ax + 4.0, ay - 2.0), arrow_color);
 }
 
 fn draw_squirrels(squirrels: &[Squirrel], camera: &Camera) {

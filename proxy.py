@@ -238,17 +238,21 @@ class Handler(SimpleHTTPRequestHandler):
         with MP_LOCK:
             while code in MP_ROOMS:
                 code = _mp_generate_code()
-            MP_ROOMS[code] = {"state": "{}", "inputs": [], "created": _time.time(), "players": 1}
+            MP_ROOMS[code] = {"state": "{}", "inputs": [], "created": _time.time(), "players": 1, "next_slot": 2}
         self._send_json(json.dumps({"room": code}))
 
     def _handle_mp_join(self, params):
         code = params.get("room", [""])[0].upper()
         with MP_LOCK:
-            if code in MP_ROOMS:
-                MP_ROOMS[code]["players"] = 2
-                self._send_json(json.dumps({"ok": True, "room": code}))
-            else:
+            if code not in MP_ROOMS:
                 self._send_json(json.dumps({"ok": False, "error": "Room not found"}))
+            elif MP_ROOMS[code]["next_slot"] > 4:
+                self._send_json(json.dumps({"ok": False, "error": "Room full (4/4)"}))
+            else:
+                slot = MP_ROOMS[code]["next_slot"]
+                MP_ROOMS[code]["next_slot"] = slot + 1
+                MP_ROOMS[code]["players"] = max(MP_ROOMS[code]["players"], slot)
+                self._send_json(json.dumps({"ok": True, "room": code, "slot": slot}))
 
     def _handle_mp_sync(self, params, body):
         """Host pushes its state snapshot."""
